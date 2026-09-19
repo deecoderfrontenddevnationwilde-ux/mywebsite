@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Database
+instance/*.db
+instance/*.sqlite3
+
+# Uploaded files (keep the folders, ignore the contents)
+uploads/news/*
+uploads/products/*
+!uploads/news/.gitkeep
+!uploads/products/.gitkeep
+
+# Migrations cache
+migrations/__pycache__/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store

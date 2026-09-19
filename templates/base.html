@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ company_name }} | Innovative Tech Solutions{% endblock %}</title>
+    <meta name="description" content="{% block description %}Dee Coder Technologies builds high-performance web applications, cybersecurity solutions, and scalable digital products. Engineering the digital future.{% endblock %}">
+    <meta name="keywords" content="web development, cybersecurity, UI/UX design, front-end, React, code review">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site-extra.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/g6jYI.jpg') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-messages" id="flashMessages">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <nav class="nav">
+        <a href="{{ url_for('public.home') }}" class="nav-brand">
+            <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="Dee Coder">
+            Dee <span>Coder</span>
+        </a>
+        <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="{{ url_for('public.home') }}#home">Home</a></li>
+            <li><a href="{{ url_for('public.home') }}#services">Services</a></li>
+            <li><a href="{{ url_for('public.home') }}#about">About</a></li>
+            <li><a href="{{ url_for('public.news_list') }}">News</a></li>
+            <li><a href="{{ url_for('public.products_list') }}">Products</a></li>
+            <li><a href="{{ url_for('public.home') }}#pricing">Pricing</a></li>
+            <li><a href="{{ url_for('public.home') }}#contact" class="nav-cta">Get Started</a></li>
+        </ul>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <h3>Dee Coder <span>Technologies</span></h3>
+                    <p>Front-end developer building clean, responsive websites and providing professional code reviews.</p>
+                    <div class="socials">
+                        <a href="https://github.com/deecoderfrontenddevnationwilde-ux" target="_blank" aria-label="GitHub"><i class="ri-github-fill"></i></a>
+                        <a href="https://www.linkedin.com/in/dee-coder-front-end-dev-dee-coder-814a2b416" target="_blank" aria-label="LinkedIn"><i class="ri-linkedin-fill"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="ri-twitter-x-fill"></i></a>
+                        <a href="https://www.tiktok.com/@deecoderfrontenddev" target="_blank" aria-label="TikTok"><i class="ri-tiktok-fill"></i></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Explore</h4>
+                    <ul>
+                        <li><a href="{{ url_for('public.home') }}#about">About</a></li>
+                        <li><a href="{{ url_for('public.news_list') }}">News</a></li>
+                        <li><a href="{{ url_for('public.products_list') }}">Products</a></li>
+                        <li><a href="{{ url_for('public.home') }}#pricing">Pricing</a></li>
+                        <li><a href="{{ url_for('public.home') }}#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="{{ url_for('public.home') }}#services">Web Development</a></li>
+                        <li><a href="{{ url_for('public.home') }}#services">UI/UX Design</a></li>
+                        <li><a href="{{ url_for('public.home') }}#services">E-Commerce</a></li>
+                        <li><a href="{{ url_for('public.home') }}#services">Code Reviews</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Stay in touch</h4>
+                    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:0.5rem">Occasional tips on front-end and design, plus news &amp; product updates. No spam.</p>
+                    <form class="newsletter" id="newsletterForm">
+                        <input type="email" name="email" id="newsletterEmail" placeholder="Your email" aria-label="Email for newsletter" required>
+                        <button type="submit">Join</button>
+                    </form>
+                    <div class="form-feedback" id="newsletterFeedback"></div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy;2023 - 2026 Dee Coder Technologies. Built with care · All rights reserved. · <a href="{{ url_for('admin.login') }}" style="color:inherit;">Admin</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-top" id="backTop" aria-label="Back to top"><i class="ri-arrow-up-line"></i></button>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

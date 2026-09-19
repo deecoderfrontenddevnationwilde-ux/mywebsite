@@ -1,0 +1,30 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}What We Offer{% endblock %}
+{% block admin_content %}
+<div class="admin-toolbar">
+    <p class="admin-help-text">Manage the services shown in the public What We Offer section.</p>
+    <a href="{{ url_for('admin.offers_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add Offer</a>
+</div>
+<div class="admin-panel admin-table-wrap">
+    <table class="admin-table">
+        <thead><tr><th>Order</th><th>Offer</th><th>Icon</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for offer in offers %}
+        <tr>
+            <td>{{ offer.display_order }}</td>
+            <td><strong>{{ offer.title }}</strong><br><span class="admin-help-text">{{ offer.description|truncate(100) }}</span></td>
+            <td>{{ offer.icon or '—' }}</td>
+            <td><span class="badge {{ 'badge-active' if offer.active else 'badge-inactive' }}">{{ 'Active' if offer.active else 'Inactive' }}</span></td>
+            <td class="admin-actions">
+                <a href="{{ url_for('admin.offers_edit', offer_id=offer.id) }}" class="a-btn a-btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('admin.offers_delete', offer_id=offer.id) }}" onsubmit="return confirmDelete('this offer');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}<tr class="empty-row"><td colspan="5">No offers yet. Add the first service above.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Featured Projects{% endblock %}
+{% block admin_content %}
+<div class="admin-toolbar">
+    <p class="admin-help-text">Manage the projects shown in the public Featured Projects section.</p>
+    <a href="{{ url_for('admin.projects_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add Project</a>
+</div>
+<div class="admin-panel admin-table-wrap">
+    <table class="admin-table">
+        <thead><tr><th></th><th>Project</th><th>Category</th><th>Order</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for project in projects %}
+        <tr>
+            <td>{% if project.image and project.image.startswith('static:') %}<img class="thumb" src="{{ url_for('static', filename=project.image[7:]) }}" alt="">{% elif project.image %}<img class="thumb" src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="">{% else %}<div class="thumb"></div>{% endif %}</td>
+            <td><strong>{{ project.title }}</strong><br><span class="admin-help-text">{{ project.short_description|truncate(100) }}</span></td>
+            <td>{{ project.category or '—' }}</td>
+            <td>{{ project.display_order }}</td>
+            <td><span class="badge {{ 'badge-active' if project.active else 'badge-inactive' }}">{{ 'Active' if project.active else 'Inactive' }}</span></td>
+            <td class="admin-actions">
+                <a href="{{ url_for('admin.projects_edit', project_id=project.id) }}" class="a-btn a-btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('admin.projects_delete', project_id=project.id) }}" onsubmit="return confirmDelete('this project');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}<tr class="empty-row"><td colspan="6">No featured projects yet. Add the first project above.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

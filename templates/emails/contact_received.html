@@ -1,0 +1,10 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<p style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 12px 0;">We've received your message</p>
+<p>Hi {{ contact.name }},</p>
+<p>Your message has been received and is currently awaiting review. We'll get back to you as soon as possible.</p>
+<p style="background:rgba(255,255,255,0.05);border-radius:10px;padding:14px 16px;color:#94a3b8;margin:18px 0;">
+  {{ contact.message }}
+</p>
+<p>Thanks for reaching out to {{ company_name }}.</p>
+{% endblock %}

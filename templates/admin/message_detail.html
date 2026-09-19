@@ -1,0 +1,52 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Message from {{ message.name }}{% endblock %}
+{% block admin_content %}
+<div class="admin-panel">
+    <p><strong>From:</strong> {{ message.name }} &lt;{{ message.email }}&gt;</p>
+    <p><strong>Subject:</strong> {{ message.subject or '—' }}</p>
+    <p><strong>Received:</strong> {{ message.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+    <p><strong>Status:</strong> <span class="badge badge-{{ message.status|lower }}">{{ message.status }}</span></p>
+    {% if message.reviewed_at %}<p><strong>Reviewed:</strong> {{ message.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</p>{% endif %}
+
+    <div class="admin-form-group" style="margin-top:1.25rem;">
+        <label>Message</label>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;white-space:pre-wrap;">{{ message.message }}</div>
+    </div>
+
+    {% if message.admin_note %}
+    <div class="admin-form-group">
+        <label>Existing Admin Note</label>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;">{{ message.admin_note }}</div>
+    </div>
+    {% endif %}
+
+    {% if message.status == 'PENDING' %}
+    <div class="admin-form-group" style="margin-top:1.5rem;">
+        <label for="admin_note">Admin Note (optional, included in decline emails)</label>
+        <textarea id="admin_note" name="admin_note_display" style="min-height:80px;"></textarea>
+    </div>
+    <div class="admin-form-actions">
+        <form method="POST" action="{{ url_for('admin.message_approve', message_id=message.id) }}" style="display:inline;" onsubmit="return prepAndConfirm(this)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="admin_note" value="">
+            <button type="submit" class="a-btn a-btn-primary">Approve</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.message_decline', message_id=message.id) }}" style="display:inline;" onsubmit="return prepAndConfirm(this)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="admin_note" value="">
+            <button type="submit" class="a-btn a-btn-danger">Decline</button>
+        </form>
+    </div>
+    <script>
+        function prepAndConfirm(form) {
+            const noteBox = document.getElementById('admin_note');
+            const note = noteBox ? noteBox.value : '';
+            form.querySelector('input[name="admin_note"]').value = note;
+            return confirm('Are you sure? This will email the sender immediately.');
+        }
+    </script>
+    {% else %}
+    <a href="{{ url_for('admin.messages_index') }}" class="a-btn" style="margin-top:1rem;">&larr; Back to Messages</a>
+    {% endif %}
+</div>
+{% endblock %}

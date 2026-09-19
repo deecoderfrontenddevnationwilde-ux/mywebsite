@@ -1,0 +1,24 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ 'Edit Featured Project' if project else 'Add Featured Project' }}{% endblock %}
+{% block admin_content %}
+{% set f = form if form is not none else project %}
+<form method="POST" enctype="multipart/form-data" class="admin-panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="title">Project title</label><input type="text" id="title" name="title" maxlength="200" required value="{{ f.title if f else '' }}"></div>
+        <div class="admin-form-group"><label for="category">Category</label><input type="text" id="category" name="category" maxlength="100" value="{{ f.category if f else '' }}" placeholder="E-Commerce, Security, UI/UX"></div>
+    </div>
+    <div class="admin-form-group"><label for="short_description">Short description</label><textarea id="short_description" name="short_description" maxlength="500" required style="min-height:90px;">{{ f.short_description if f else '' }}</textarea></div>
+    <div class="admin-form-group"><label for="description">Full description</label><textarea id="description" name="description">{{ f.description if f else '' }}</textarea></div>
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="project_url">Live project URL</label><input type="url" id="project_url" name="project_url" value="{{ f.project_url if f else '' }}" placeholder="https://example.com"></div>
+        <div class="admin-form-group"><label for="github_url">GitHub/project URL</label><input type="url" id="github_url" name="github_url" value="{{ f.github_url if f else '' }}" placeholder="https://github.com/..."></div>
+    </div>
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="display_order">Display order</label><input type="number" id="display_order" name="display_order" min="0" value="{{ f.display_order if f else 0 }}"></div>
+        <div class="admin-form-group"><label for="image">Project image</label>{% if project and project.image and project.image.startswith('static:') %}<img class="admin-current-image" src="{{ url_for('static', filename=project.image[7:]) }}" alt="">{% elif project and project.image %}<img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="">{% endif %}<input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp"><div class="admin-help-text">Leave blank to keep the current image.</div></div>
+    </div>
+    <label class="admin-checkbox"><input type="checkbox" name="active" {{ 'checked' if f and f.active else '' }}> Active on public website</label>
+    <div class="admin-form-actions"><button type="submit" class="a-btn a-btn-primary">Save Project</button><a href="{{ url_for('admin.projects_index') }}" class="a-btn">Cancel</a></div>
+</form>
+{% endblock %}

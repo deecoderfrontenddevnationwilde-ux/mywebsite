@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}News{% endblock %}
+{% block admin_content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+    <a href="{{ url_for('admin.news_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add News</a>
+</div>
+<div class="admin-panel">
+    <table class="admin-table">
+        <thead><tr><th></th><th>Title</th><th>Status</th><th>Author</th><th>Updated</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for a in articles %}
+            <tr>
+                <td>
+                    {% if a.featured_image %}
+                    <img class="thumb" src="{{ url_for('public.uploaded_file', filename=a.featured_image) }}" alt="">
+                    {% else %}
+                    <div class="thumb" style="background:rgba(255,255,255,0.05);"></div>
+                    {% endif %}
+                </td>
+                <td>{{ a.title }}</td>
+                <td><span class="badge {{ 'badge-published' if a.published else 'badge-draft' }}">{{ 'Published' if a.published else 'Draft' }}</span></td>
+                <td>{{ a.author or '—' }}</td>
+                <td>{{ a.updated_at.strftime('%b %d, %Y') }}</td>
+                <td style="white-space:nowrap;">
+                    <a href="{{ url_for('admin.news_edit', article_id=a.id) }}" class="a-btn a-btn-sm">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.news_delete', article_id=a.id) }}" style="display:inline;" onsubmit="return confirmDelete('this news article');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr class="empty-row"><td colspan="6">No news articles yet. Click "Add News" to create your first one.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<p style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 12px 0;">You're subscribed! 🎉</p>
+<p>Hello,</p>
+<p>You're subscribed! We'll keep you updated with our latest news and products.</p>
+<p>Thanks for staying connected with {{ company_name }}.</p>
+{% endblock %}
+{% block footer %}
+<p style="margin:0;">Didn't sign up for this? <a href="{{ unsubscribe_link }}" style="color:#00d2ff;">Unsubscribe here</a>.</p>
+<p style="margin:16px 0 0 0;">&copy; {{ company_name }}. All rights reserved.</p>
+{% endblock %}

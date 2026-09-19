@@ -1,0 +1,22 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ 'Edit Offer' if offer else 'Add Offer' }}{% endblock %}
+{% block admin_content %}
+{% set f = form if form is not none else offer %}
+<form method="POST" class="admin-panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="title">Title</label><input type="text" id="title" name="title" maxlength="200" required value="{{ f.title if f else '' }}"></div>
+        <div class="admin-form-group"><label for="icon">Icon class</label><input type="text" id="icon" name="icon" maxlength="100" value="{{ f.icon if f else '' }}" placeholder="ri-code-s-slash-line"><div class="admin-help-text">Optional Remix Icon class, without the <code>ri-</code> markup.</div></div>
+    </div>
+    <div class="admin-form-group"><label for="description">Description</label><textarea id="description" name="description" maxlength="1000" required>{{ f.description if f else '' }}</textarea></div>
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="link_url">Button URL</label><input type="url" id="link_url" name="link_url" value="{{ f.link_url if f else '' }}" placeholder="https://example.com"></div>
+        <div class="admin-form-group"><label for="link_label">Button label</label><input type="text" id="link_label" name="link_label" maxlength="100" value="{{ f.link_label if f else '' }}" placeholder="Learn more"></div>
+    </div>
+    <div class="admin-form-row">
+        <div class="admin-form-group"><label for="display_order">Display order</label><input type="number" id="display_order" name="display_order" min="0" value="{{ f.display_order if f else 0 }}"></div>
+        <div class="admin-form-group" style="padding-top:1.9rem;"><label class="admin-checkbox"><input type="checkbox" name="active" {{ 'checked' if f and f.active else '' }}> Active on public website</label></div>
+    </div>
+    <div class="admin-form-actions"><button type="submit" class="a-btn a-btn-primary">Save Offer</button><a href="{{ url_for('admin.offers_index') }}" class="a-btn">Cancel</a></div>
+</form>
+{% endblock %}

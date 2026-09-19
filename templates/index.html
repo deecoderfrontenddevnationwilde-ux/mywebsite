@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+{% block content %}
+
+    <!-- HERO -->
+    <header class="hero" id="home">
+        <div class="container">
+            <div class="hero-grid">
+                <div>
+                    <span class="hero-badge">✨ Front-End Developer · Clean Code · Beautiful Design</span>
+                    <h1>Engineering The <em>Digital Future</em></h1>
+                    <p>I build modern, responsive websites and web apps with clean code and thoughtful design — from landing pages and e-commerce to full product interfaces. Let’s turn your ideas into something people love to use.</p>
+                    <div class="hero-actions">
+                        <a href="#projects" class="btn btn-primary">View Our Work →</a>
+                        <a href="#contact" class="btn btn-ghost">Get In Touch</a>
+                        <a href="https://wa.me/2348075346224" target="_blank" rel="noopener" class="btn btn-wa"><i class="ri-whatsapp-line"></i> WhatsApp</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="Dee Coder Technologies">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- TRUST BAR -->
+    <div class="trust-bar">
+        <div class="trust-item"><i class="ri-shield-check-line"></i> Clean, maintainable code</div>
+        <div class="trust-item"><i class="ri-smartphone-line"></i> Fully responsive design</div>
+        <div class="trust-item"><i class="ri-time-line"></i> Fast turnaround</div>
+        <div class="trust-item"><i class="ri-chat-1-line"></i> Free consultation</div>
+        <div class="trust-item"><i class="ri-code-box-line"></i> Code reviews available</div>
+    </div>
+
+    <!-- SERVICES -->
+    <section id="services">
+        <div class="container">
+            <div class="section-head">
+                <h2>What We <span>Offer</span></h2>
+                <p>Software engineering and security services designed for speed, resilience, and trust.</p>
+            </div>
+            <div class="services-grid">
+                {% for offer in service_offers %}
+                <article class="service-card reveal">
+                    <div class="icon"><i class="{{ offer.icon or 'ri-sparkling-line' }}"></i></div>
+                    <h3>{{ offer.title }}</h3>
+                    <p>{{ offer.description }}</p>
+                    {% if offer.link_url %}<a href="{{ offer.link_url }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;"{% if offer.link_url.startswith('http') %} target="_blank" rel="noopener"{% endif %}>{{ offer.link_label or 'Learn more' }} →</a>{% endif %}
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>🌟 About <span>Us</span></h2>
+                <p>Bridging powerful software engineering and uncompromised digital security.</p>
+            </div>
+            <div class="about-grid">
+                <div class="about-text reveal">
+                    <h3>Who We Are</h3>
+                    <h2>Built for Performance. Hardened for Security.</h2>
+                    <p>At our core, we bridge the gap between powerful software engineering and uncompromised digital security.</p>
+                    <p>We build modern, high-performance web applications, scalable software solutions, and digital infrastructures—engineered with security baked into every line of code. From intuitive user interfaces to back-end architecture and vulnerability assessments, we ensure your tech stack is fast, resilient, and built to withstand evolving cyber threats.</p>
+                    <a href="#contact" class="btn btn-ghost" style="margin-top:0.5rem">Work With Us</a>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box reveal">
+                        <h4 class="counter" data-target="50">0</h4>
+                        <p>Projects Delivered</p>
+                    </div>
+                    <div class="stat-box reveal">
+                        <h4 class="counter" data-target="3">0</h4>
+                        <p>Featured Builds</p>
+                    </div>
+                    <div class="stat-box reveal">
+                        <h4 class="counter" data-target="99">0</h4>
+                        <p>Uptime Focus %</p>
+                    </div>
+                    <div class="stat-box reveal">
+                        <h4>24h</h4>
+                        <p>Typical Reply Time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BEHIND THE CODE -->
+    <section id="behind">
+        <div class="container">
+            <div class="section-head">
+                <h2>Behind the <span>Code</span></h2>
+                <p>How I approach every project.</p>
+            </div>
+            <div class="bio-card reveal">
+                <p>Operating under the professional banner Dee Coder, I specialize in crafting clean, high-fidelity, and responsive user interfaces. Combining a keen eye for minimalist design aesthetics with a strong structural foundation in HTML5 and CSS, I transform creative concepts into sharp, functional web layouts.</p>
+                <p>My focus is on writing semantic code and building seamless, pixel-perfect digital experiences that bridge the gap between form and function.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- MISSION & VISION -->
+    <section id="mission">
+        <div class="container">
+            <div class="section-head">
+                <h2>🎯 Mission & <span>Vision</span></h2>
+                <p>What drives every product and security decision we make.</p>
+            </div>
+            <div class="mv-grid">
+                <div class="mv-card reveal">
+                    <span class="mv-icon">🎯</span>
+                    <h3>Mission Statement</h3>
+                    <p class="tag">To build, secure, and empower.</p>
+                    <p>Our mission is to deliver cutting-edge software development integrated with defense-grade cybersecurity solutions—helping businesses innovate rapidly without compromising safety, performance, or user trust.</p>
+                </div>
+                <div class="mv-card reveal">
+                    <span class="mv-icon">👁️</span>
+                    <h3>Vision Statement</h3>
+                    <p class="tag">To redefine how modern tech is built.</p>
+                    <p>We envision a digital landscape where secure coding is the standard, not an afterthought. We aim to be the premier technology partner for organizations seeking scalable digital products backed by impenetrable digital defense.</p>
+                </div>
+            </div>
+            <div class="section-head" style="margin-bottom:2rem">
+                <h2>🛡️ Our Core <span>Values</span></h2>
+                <p>Principles that shape how we design, code, and protect.</p>
+            </div>
+            <div class="values-grid">
+                <div class="value-card reveal">
+                    <span class="emoji">🔐</span>
+                    <h4>Security by Design</h4>
+                    <p>We don't just patch vulnerabilities later; we architect systems to be resilient from day one.</p>
+                </div>
+                <div class="value-card reveal">
+                    <span class="emoji">⚡</span>
+                    <h4>Engineering Precision</h4>
+                    <p>Clean syntax, intuitive UI/UX, and optimal performance drive every project we launch.</p>
+                </div>
+                <div class="value-card reveal">
+                    <span class="emoji">👁️</span>
+                    <h4>Proactive Defense</h4>
+                    <p>We anticipate cyber threats before they happen through constant auditing, testing, and modern security protocols.</p>
+                </div>
+                <div class="value-card reveal">
+                    <span class="emoji">🤝</span>
+                    <h4>Absolute Transparency</h4>
+                    <p>We provide clear code, detailed security reports, and honest technical guidance—no jargon, just results.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section id="capabilities" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>⚡ Core <span>Capabilities</span></h2>
+                <p>What we deliver across software engineering and security.</p>
+            </div>
+            <div style="overflow-x:auto" class="reveal">
+                <table class="cap-table">
+                    <thead>
+                        <tr><th>Service Area</th><th>What We Deliver</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Custom Software Development</td>
+                            <td>High-performance web applications, responsive user interfaces, APIs, and scalable backend architecture.</td>
+                        </tr>
+                        <tr>
+                            <td>Application & Network Security</td>
+                            <td>Penetration testing, vulnerability assessments, secure code audits, and server hardening.</td>
+                        </tr>
+                        <tr>
+                            <td>DevSecOps Integration</td>
+                            <td>Embedding security tools directly into the development pipeline for continuous protection and deployment.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section id="skills">
+        <div class="container">
+            <div class="section-head">
+                <h2>Our Skills & <span>Tools</span></h2>
+                <p>Technologies used to design and build reliable front-end experiences.</p>
+            </div>
+            <div class="skills-grid">
+                <div class="skill-cat reveal">
+                    <h3><i class="ri-code-s-slash-line"></i> Languages</h3>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>HTML5</span><span>95%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:95%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>CSS3 / Animations</span><span>92%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:92%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>JavaScript</span><span>88%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:88%"></div></div>
+                    </div>
+                </div>
+                <div class="skill-cat reveal">
+                    <h3><i class="ri-layout-line"></i> Design & UX</h3>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>Responsive Layout</span><span>94%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:94%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>UI Design</span><span>90%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:90%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>Accessibility</span><span>85%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:85%"></div></div>
+                    </div>
+                </div>
+                <div class="skill-cat reveal">
+                    <h3><i class="ri-tools-line"></i> Tools & Workflow</h3>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>Git / GitHub</span><span>87%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:87%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>Figma / Design handoff</span><span>82%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:82%"></div></div>
+                    </div>
+                    <div class="skill-bar">
+                        <div class="skill-bar-head"><span>Performance & SEO basics</span><span>80%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="--level:80%"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tech-strip">
+                <div class="tech-chip"><i class="ri-html5-fill"></i> HTML5</div>
+                <div class="tech-chip"><i class="ri-css3-fill"></i> CSS3</div>
+                <div class="tech-chip"><i class="ri-javascript-fill"></i> JavaScript</div>
+                <div class="tech-chip"><i class="ri-reactjs-line"></i> React</div>
+                <div class="tech-chip"><i class="ri-git-branch-line"></i> Git</div>
+                <div class="tech-chip"><i class="ri-figma-line"></i> Figma</div>
+                <div class="tech-chip"><i class="ri-smartphone-line"></i> Responsive</div>
+                <div class="tech-chip"><i class="ri-accessibility-line"></i> A11y</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section id="process" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>How We <span>Work</span></h2>
+                <p>A simple, transparent process so you always know what’s next.</p>
+            </div>
+            <div class="process-grid">
+                <div class="process-card reveal">
+                    <h3>Discover</h3>
+                    <p>We talk about your goals, audience, and must-haves so the build matches what you actually need.</p>
+                </div>
+                <div class="process-card reveal">
+                    <h3>Design & Plan</h3>
+                    <p>Layout, structure, and visual direction are agreed before heavy coding — fewer surprises later.</p>
+                </div>
+                <div class="process-card reveal">
+                    <h3>Build & Iterate</h3>
+                    <p>I develop in stages, share previews, and refine based on your feedback until it feels right.</p>
+                </div>
+                <div class="process-card reveal">
+                    <h3>Launch & Support</h3>
+                    <p>Deploy, hand over clear notes, and stay available for tweaks and questions after go-live.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects">
+        <div class="container">
+            <div class="section-head">
+                <h2> Our Featured <span>Projects</span></h2>
+                <p>Real products built with clean code, modern design, and attention to detail.</p>
+            </div>
+            <div class="projects-grid">
+                {% for project in featured_projects %}
+                <article class="project-card reveal">
+                    {% if project.image and project.image.startswith('static:') %}<img src="{{ url_for('static', filename=project.image[7:]) }}" alt="{{ project.title }}">{% elif project.image %}<img src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="{{ project.title }}">{% else %}<img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="{{ project.title }}">{% endif %}
+                    <div class="project-body">
+                        <h3>{{ project.title }}</h3>
+                        <p>{{ project.short_description }}</p>
+                        <div class="project-tags">
+                            {% if project.category %}<span>{{ project.category }}</span>{% endif %}
+                            {% if project.project_url %}<a href="{{ project.project_url }}" target="_blank" rel="noopener">Live project →</a>{% endif %}
+                            {% if project.github_url %}<a href="{{ project.github_url }}" target="_blank" rel="noopener">GitHub →</a>{% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>Simple <span>Pricing</span></h2>
+                <p>Transparent packages. Custom quotes for larger or ongoing work.</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="price-card reveal">
+                    <h3>Starter</h3>
+                    <p class="desc">Perfect for a personal or small business presence online.</p>
+                    <div class="price-amount">$149 <span>starting</span></div>
+                    <ul class="price-features">
+                        <li><i class="ri-check-line"></i> 1–3 page website</li>
+                        <li><i class="ri-check-line"></i> Mobile-responsive design</li>
+                        <li><i class="ri-check-line"></i> Contact form</li>
+                        <li><i class="ri-check-line"></i> Basic SEO setup</li>
+                        <li><i class="ri-check-line"></i> 1 revision round</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-ghost">Get Started</a>
+                </div>
+                <div class="price-card featured reveal">
+                    <h3>Professional</h3>
+                    <p class="desc">For brands that need a fuller site with polish and interaction.</p>
+                    <div class="price-amount">$399 <span>starting</span></div>
+                    <ul class="price-features">
+                        <li><i class="ri-check-line"></i> Up to 6–8 pages</li>
+                        <li><i class="ri-check-line"></i> Custom animations & UI</li>
+                        <li><i class="ri-check-line"></i> Project / portfolio sections</li>
+                        <li><i class="ri-check-line"></i> Performance optimization</li>
+                        <li><i class="ri-check-line"></i> 2 revision rounds</li>
+                        <li><i class="ri-check-line"></i> 14 days post-launch support</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-primary">Choose Professional</a>
+                </div>
+                <div class="price-card reveal">
+                    <h3>Custom / Review</h3>
+                    <p class="desc">E-commerce, complex UIs, or a detailed code review.</p>
+                    <div class="price-amount">Custom</div>
+                    <ul class="price-features">
+                        <li><i class="ri-check-line"></i> E-commerce or app-style UI</li>
+                        <li><i class="ri-check-line"></i> Full code review package</li>
+                        <li><i class="ri-check-line"></i> Ongoing support options</li>
+                        <li><i class="ri-check-line"></i> Priority communication</li>
+                        <li><i class="ri-check-line"></i> Tailored timeline</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-ghost">Request a Quote</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- LATEST NEWS (dynamic) -->
+    <section id="latest-news">
+        <div class="container">
+            <div class="section-head">
+                <h2>Latest <span>News</span></h2>
+                <p>Updates, announcements, and behind-the-scenes from the team.</p>
+            </div>
+            {% if latest_news %}
+            <div class="projects-grid">
+                {% for article in latest_news %}
+                <article class="project-card reveal">
+                    {% if article.featured_image %}
+                    <img src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}" alt="{{ article.title }}">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="{{ article.title }}">
+                    {% endif %}
+                    <div class="project-body">
+                        <h3>{{ article.title }}</h3>
+                        <p>{{ article.summary }}</p>
+                        <div class="project-tags">
+                            <a href="{{ url_for('public.news_detail', slug=article.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">Read More →</a>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:2.5rem;">
+                <a href="{{ url_for('public.news_list') }}" class="btn btn-primary">View All News</a>
+            </div>
+            {% else %}
+            <div class="empty-state">No news articles published yet. Check back soon!</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- FEATURED PRODUCTS (dynamic) -->
+    <section id="featured-products" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>Featured <span>Products</span></h2>
+                <p>A look at what we currently offer.</p>
+            </div>
+            {% if featured_products %}
+            <div class="projects-grid">
+                {% for product in featured_products %}
+                <article class="project-card reveal">
+                    {% if product.featured %}<span class="card-badge">Featured</span>{% endif %}
+                    {% if product.image %}
+                    <img src="{{ url_for('public.uploaded_file', filename=product.image) }}" alt="{{ product.name }}">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="{{ product.name }}">
+                    {% endif %}
+                    <div class="project-body">
+                        <h3>{{ product.name }}</h3>
+                        <p>{{ product.short_description or (product.description[:120] ~ '...') }}</p>
+                        {% if product.price %}<div class="card-price">${{ '%.2f'|format(product.price) }}</div>{% endif %}
+                        <div class="project-tags">
+                            <a href="{{ url_for('public.product_detail', slug=product.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">View Product →</a>
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:2.5rem;">
+                <a href="{{ url_for('public.products_list') }}" class="btn btn-primary">View All Products</a>
+            </div>
+            {% else %}
+            <div class="empty-state">No products published yet. Check back soon!</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section id="testimonials">
+        <div class="container">
+            <div class="section-head">
+                <h2>What Clients <span>Say</span></h2>
+                <p>Feedback from people I’ve built with and for.</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card reveal">
+                    <div class="stars">★★★★★</div>
+                    <p>Dee Coder delivered a clean, modern site on time. Clear communication and code that was easy to hand off to our team.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">AM</div>
+                        <div class="author-info">
+                            <h4>Adaobi M.</h4>
+                            <span>Founder, RetailTech</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card reveal">
+                    <div class="stars">★★★★★</div>
+                    <p>Professional, responsive, and great with design details. The site looks exactly how we imagined — and works smoothly on mobile.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">JK</div>
+                        <div class="author-info">
+                            <h4>James K.</h4>
+                            <span>Founder, small business</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card reveal">
+                    <div class="stars">★★★★★</div>
+                    <p>Got a thorough code review that improved performance and structure. Clear notes and practical suggestions — highly recommend.</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">SO</div>
+                        <div class="author-info">
+                            <h4>Sarah O.</h4>
+                            <span>Junior developer</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section-alt">
+        <div class="container">
+            <div class="section-head">
+                <h2>Frequently Asked <span>Questions</span></h2>
+                <p>Straight answers so you know what to expect.</p>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        How long does a typical project take?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">A simple landing page can be ready in about 2-4 weeks. Multi-page sites usually take 5-10 weeks depending on content and revisions. You’ll get a clear timeline after we discuss scope.</div>
+                    </div>
+                </div>
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        Do I need to provide designs?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">No. You can share examples you like, a logo, and brand colors — I’ll design the layout and UI. If you already have Figma or sketches, even better.</div>
+                    </div>
+                </div>
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        What do you use to build sites?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">Mainly HTML, CSS, and JavaScript for fast, maintainable front-ends. React when the project benefits from it. Focus is always on performance, accessibility, and clean structure.</div>
+                    </div>
+                </div>
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        Can you review my existing code?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">Yes. Code reviews cover structure, readability, performance, accessibility, and practical improvements — with written feedback you can act on.</div>
+                    </div>
+                </div>
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        How do payments work?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">Usually a deposit to start, then the balance on delivery or at agreed milestones. Details are confirmed before work begins so everything is clear.</div>
+                    </div>
+                </div>
+                <div class="faq-item reveal">
+                    <button class="faq-question" aria-expanded="false">
+                        Do you work with clients outside Nigeria?
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner">Yes — fully remote. Communication is mainly via email, WhatsApp, or video calls, whichever works best for you.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section>
+        <div class="container">
+            <div class="cta-banner reveal">
+                <h2>Have a project in mind?</h2>
+                <p>Tell me what you’re building. Free, no-pressure chat — whether you need a full site, a redesign, or a code review.</p>
+                <div class="hero-actions">
+                    <a href="#contact" class="btn btn-primary">Send a Message</a>
+                    <a href="https://wa.me/2348075346224" target="_blank" rel="noopener" class="btn btn-wa"><i class="ri-whatsapp-line"></i> Chat on WhatsApp</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact">
+        <div class="container">
+            <div class="section-head">
+                <h2>Let’s <span>Build</span> Something</h2>
+                <p>Share a short brief or just say hello — I usually reply within 24 hours.</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info reveal">
+                    <h3>Get in touch</h3>
+                    <p>Whether you have a clear brief or only a rough idea, I’m happy to talk through options and next steps.</p>
+                    <div class="contact-detail">
+                        <i class="ri-mail-line"></i>
+                        <span>deecodertechnologiesworldwide@gmail.com</span>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="ri-whatsapp-line"></i>
+                        <span>WhatsApp · +234 807 534 6224</span>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="ri-map-pin-line"></i>
+                        <span>Lagos, Nigeria · Available remotely</span>
+                    </div>
+                    <div class="contact-detail">
+                        <i class="ri-time-line"></i>
+                        <span>Mon–Fri · Typical reply under 24h</span>
+                    </div>
+                </div>
+                <form class="contact-form reveal" id="contactForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" required placeholder="Your name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required placeholder="you@company.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="service">Service of interest</label>
+                        <select id="service" name="service">
+                            <option value="">Select a service</option>
+                            <option>Web Development</option>
+                            <option>Cyber Security</option>
+                            <option>UI/UX Design</option>
+                            <option>Code Review</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" required placeholder="Tell us about your project..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%">Send Message</button>
+                    <div class="form-feedback" id="contactFeedback"></div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+{% endblock %}

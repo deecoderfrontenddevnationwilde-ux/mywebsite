@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Something Went Wrong | {{ company_name }}{% endblock %}
+{% block content %}
+<section class="error-page">
+    <div class="container">
+        <h1>500</h1>
+        <p style="color:var(--muted);margin-top:1rem;">Something went wrong on our end. Please try again in a moment.</p>
+        <a href="{{ url_for('public.home') }}" class="btn btn-primary" style="margin-top:1.5rem;display:inline-block;">Back to Homepage</a>
+    </div>
+</section>
+{% endblock %}

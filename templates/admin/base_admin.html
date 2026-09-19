@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin | {{ company_name }}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="admin-body">
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <a href="{{ url_for('admin.dashboard') }}" class="admin-brand">Dee <span>Admin</span></a>
+            <nav class="admin-nav">
+                <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}"><i class="ri-dashboard-line"></i> Dashboard</a>
+                <a href="{{ url_for('admin.offers_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.offers') else '' }}"><i class="ri-service-line"></i> What We Offer</a>
+                <a href="{{ url_for('admin.projects_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.projects') else '' }}"><i class="ri-layout-grid-line"></i> Featured Projects</a>
+                <a href="{{ url_for('admin.news_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.news') else '' }}"><i class="ri-newspaper-line"></i> News</a>
+                <a href="{{ url_for('admin.products_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.products') else '' }}"><i class="ri-shopping-bag-line"></i> Products</a>
+                <a href="{{ url_for('admin.subscribers_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.subscriber') else '' }}"><i class="ri-mail-star-line"></i> Subscribers</a>
+                <a href="{{ url_for('admin.messages_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.message') else '' }}"><i class="ri-message-3-line"></i> Contact Messages</a>
+                <div class="divider"></div>
+                <a href="{{ url_for('admin.settings') }}" class="{{ 'active' if request.endpoint == 'admin.settings' else '' }}"><i class="ri-settings-3-line"></i> Settings</a>
+                <a href="{{ url_for('public.home') }}" target="_blank"><i class="ri-external-link-line"></i> View Site</a>
+                <a href="{{ url_for('admin.logout') }}"><i class="ri-logout-box-line"></i> Logout</a>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-topbar">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                {% if admin_user %}<span style="color:var(--muted);font-size:0.85rem;">{{ admin_user.username }}</span>{% endif %}
+            </div>
+            <div class="admin-content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="admin-alert admin-alert-{{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+                {% block admin_content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

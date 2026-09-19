@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block admin_content %}
+<div class="admin-stats-grid">
+    <div class="admin-stat-card"><div class="value">{{ stats.active_offers }}</div><div class="label">Active Offers</div><a href="{{ url_for('admin.offers_index') }}" class="admin-stat-link">Manage offers</a></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.active_projects }}</div><div class="label">Active Projects</div><a href="{{ url_for('admin.projects_index') }}" class="admin-stat-link">Manage projects</a></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.total_news }}</div><div class="label">Total News Articles</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.published_news }}</div><div class="label">Published News</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.total_products }}</div><div class="label">Total Products</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.published_products }}</div><div class="label">Published Products</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.total_subscribers }}</div><div class="label">Active Subscribers</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.pending_messages }}</div><div class="label">Pending Messages</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.approved_messages }}</div><div class="label">Approved Messages</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.declined_messages }}</div><div class="label">Declined Messages</div></div>
+</div>
+
+<div class="admin-panel">
+    <h2>Recent Contact Messages</h2>
+    {% if recent_messages %}
+    <table class="admin-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Received</th><th></th></tr></thead>
+        <tbody>
+        {% for m in recent_messages %}
+            <tr>
+                <td>{{ m.name }}</td>
+                <td>{{ m.email }}</td>
+                <td><span class="badge badge-{{ m.status|lower }}">{{ m.status }}</span></td>
+                <td>{{ m.created_at.strftime('%b %d, %Y') }}</td>
+                <td><a href="{{ url_for('admin.message_detail', message_id=m.id) }}" class="a-btn a-btn-sm">View</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--muted);">No contact messages yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

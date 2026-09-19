@@ -1,0 +1,8 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<p style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 12px 0;">Your message has been approved ✅</p>
+<p>Hi {{ contact.name }},</p>
+<p>Your message has been reviewed by our team and approved. We will get back to you as soon as possible.</p>
+<p>Thank you for your patience.</p>
+<p>— The {{ company_name }} Team</p>
+{% endblock %}

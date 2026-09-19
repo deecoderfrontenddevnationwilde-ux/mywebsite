@@ -1,0 +1,39 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Products{% endblock %}
+{% block admin_content %}
+<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+    <a href="{{ url_for('admin.products_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add Product</a>
+</div>
+<div class="admin-panel">
+    <table class="admin-table">
+        <thead><tr><th></th><th>Name</th><th>Price</th><th>Category</th><th>Featured</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for p in products %}
+            <tr>
+                <td>
+                    {% if p.image %}
+                    <img class="thumb" src="{{ url_for('public.uploaded_file', filename=p.image) }}" alt="">
+                    {% else %}
+                    <div class="thumb" style="background:rgba(255,255,255,0.05);"></div>
+                    {% endif %}
+                </td>
+                <td>{{ p.name }}</td>
+                <td>{{ '$%.2f'|format(p.price) if p.price is not none else '—' }}</td>
+                <td>{{ p.category or '—' }}</td>
+                <td>{{ 'Yes' if p.featured else 'No' }}</td>
+                <td><span class="badge {{ 'badge-published' if p.published else 'badge-draft' }}">{{ 'Published' if p.published else 'Draft' }}</span></td>
+                <td style="white-space:nowrap;">
+                    <a href="{{ url_for('admin.products_edit', product_id=p.id) }}" class="a-btn a-btn-sm">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.products_delete', product_id=p.id) }}" style="display:inline;" onsubmit="return confirmDelete('this product');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr class="empty-row"><td colspan="7">No products yet. Click "Add Product" to create your first one.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

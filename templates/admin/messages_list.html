@@ -1,0 +1,30 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Contact Messages{% endblock %}
+{% block admin_content %}
+<div class="filter-chips" style="margin-bottom:1.5rem;">
+    <a href="{{ url_for('admin.messages_index', status='PENDING') }}" class="{{ 'active' if status_filter == 'PENDING' else '' }}">Pending</a>
+    <a href="{{ url_for('admin.messages_index', status='APPROVED') }}" class="{{ 'active' if status_filter == 'APPROVED' else '' }}">Approved</a>
+    <a href="{{ url_for('admin.messages_index', status='DECLINED') }}" class="{{ 'active' if status_filter == 'DECLINED' else '' }}">Declined</a>
+    <a href="{{ url_for('admin.messages_index', status='all') }}" class="{{ 'active' if status_filter == 'all' else '' }}">All</a>
+</div>
+
+<div class="admin-panel">
+    <table class="admin-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Status</th><th>Received</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for m in messages %}
+            <tr>
+                <td>{{ m.name }}</td>
+                <td>{{ m.email }}</td>
+                <td>{{ m.subject or '—' }}</td>
+                <td><span class="badge badge-{{ m.status|lower }}">{{ m.status }}</span></td>
+                <td>{{ m.created_at.strftime('%b %d, %Y') }}</td>
+                <td><a href="{{ url_for('admin.message_detail', message_id=m.id) }}" class="a-btn a-btn-sm">View</a></td>
+            </tr>
+        {% else %}
+            <tr class="empty-row"><td colspan="6">No messages in this category.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

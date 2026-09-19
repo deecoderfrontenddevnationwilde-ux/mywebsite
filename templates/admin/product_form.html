@@ -1,0 +1,64 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ 'Edit Product' if product else 'Add Product' }}{% endblock %}
+{% block admin_content %}
+{% set f = form if form is not none else product %}
+<form method="POST" enctype="multipart/form-data" class="admin-panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="admin-form-row">
+        <div class="admin-form-group">
+            <label for="name">Product Name</label>
+            <input type="text" id="name" name="name" required value="{{ f.name if f else '' }}">
+        </div>
+        <div class="admin-form-group">
+            <label for="category">Category</label>
+            <input type="text" id="category" name="category" value="{{ f.category if f else '' }}" placeholder="e.g. Web App, Template, Service">
+        </div>
+    </div>
+
+    <div class="admin-form-group">
+        <label for="short_description">Short Description</label>
+        <textarea id="short_description" name="short_description" style="min-height:70px;">{{ f.short_description if f else '' }}</textarea>
+        <div class="admin-help-text">Shown on the homepage and product listing cards.</div>
+    </div>
+
+    <div class="admin-form-group">
+        <label for="description">Full Description</label>
+        <textarea id="description" name="description" required style="min-height:240px;">{{ f.description if f else '' }}</textarea>
+    </div>
+
+    <div class="admin-form-row">
+        <div class="admin-form-group">
+            <label for="price">Price (USD, optional)</label>
+            <input type="number" step="0.01" id="price" name="price" value="{{ f.price if f and f.price is not none else '' }}">
+        </div>
+        <div class="admin-form-group">
+            <label for="image">Product Image</label>
+            {% if product and product.image %}
+            <img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=product.image) }}" alt="">
+            {% endif %}
+            <input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp">
+            <div class="admin-help-text">Leave blank to keep the current image.</div>
+        </div>
+    </div>
+
+    <label class="admin-checkbox" style="margin-bottom:0.6rem;">
+        <input type="checkbox" name="featured" {{ 'checked' if product and product.featured else '' }}>
+        Featured (shown in the homepage "Featured Products" section)
+    </label><br>
+    <label class="admin-checkbox" style="margin-bottom:0.6rem;">
+        <input type="checkbox" name="published" {{ 'checked' if product and product.published else '' }}>
+        Published (visible on the live website)
+    </label><br>
+    <label class="admin-checkbox">
+        <input type="checkbox" name="notify_on_publish" {{ 'checked' if product and product.notify_on_publish else '' }}>
+        Email subscribers when this product is published
+    </label>
+    <div class="admin-help-text">Off by default — products don't need to notify subscribers unless you turn this on.</div>
+
+    <div class="admin-form-actions">
+        <button type="submit" class="a-btn a-btn-primary">Save</button>
+        <a href="{{ url_for('admin.products_index') }}" class="a-btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

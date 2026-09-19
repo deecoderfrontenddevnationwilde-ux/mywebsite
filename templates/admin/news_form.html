@@ -1,0 +1,57 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ 'Edit News' if article else 'Add News' }}{% endblock %}
+{% block admin_content %}
+{% set f = form if form is not none else article %}
+<form method="POST" enctype="multipart/form-data" class="admin-panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="admin-form-group">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" required value="{{ f.title if f else '' }}">
+    </div>
+
+    <div class="admin-form-group">
+        <label for="summary">Summary</label>
+        <textarea id="summary" name="summary" required style="min-height:80px;">{{ f.summary if f else '' }}</textarea>
+        <div class="admin-help-text">Shown on the homepage, /news, and in the email notification. Keep it short (1-2 sentences).</div>
+    </div>
+
+    <div class="admin-form-group">
+        <label for="content">Full Article Content</label>
+        <textarea id="content" name="content" required style="min-height:280px;">{{ f.content if f else '' }}</textarea>
+        <div class="admin-help-text">Basic HTML (paragraphs, bold, links) is supported and will be rendered as-is on the article page.</div>
+    </div>
+
+    <div class="admin-form-row">
+        <div class="admin-form-group">
+            <label for="author">Author</label>
+            <input type="text" id="author" name="author" value="{{ f.author if f else '' }}" placeholder="{{ admin_user.username if admin_user else '' }}">
+        </div>
+        <div class="admin-form-group">
+            <label for="featured_image">Featured Image</label>
+            {% if article and article.featured_image %}
+            <img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}" alt="">
+            {% endif %}
+            <input type="file" id="featured_image" name="featured_image" accept=".png,.jpg,.jpeg,.gif,.webp">
+            <div class="admin-help-text">PNG, JPG, GIF, or WEBP. Leave blank to keep the current image.</div>
+        </div>
+    </div>
+
+    <label class="admin-checkbox" style="margin-top:0.5rem;">
+        <input type="checkbox" name="published" {{ 'checked' if article and article.published else '' }}>
+        Published (visible on the live website)
+    </label>
+    {% if article %}
+    <div class="admin-help-text">
+        {% if article.published %}This article is live. Unpublishing and re-publishing later will trigger a new subscriber email.{% else %}Checking "Published" for the first time will email all active subscribers automatically.{% endif %}
+    </div>
+    {% else %}
+    <div class="admin-help-text">Checking "Published" will immediately email all active subscribers about this article.</div>
+    {% endif %}
+
+    <div class="admin-form-actions">
+        <button type="submit" class="a-btn a-btn-primary">Save</button>
+        <a href="{{ url_for('admin.news_index') }}" class="a-btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

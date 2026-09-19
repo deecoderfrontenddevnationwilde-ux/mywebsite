@@ -1,0 +1,16 @@
+{% extends "emails/base_email.html" %}
+{% block content %}
+<p style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 12px 0;">New Update from {{ company_name }}</p>
+<p>Hello,</p>
+<p>We have just published a new article:</p>
+<p style="font-size:17px;font-weight:700;color:#ffffff;margin:16px 0 4px 0;">{{ article.title }}</p>
+<p style="color:#94a3b8;margin:0 0 18px 0;">{{ article.summary }}</p>
+<p style="margin:24px 0;">
+  <a href="{{ article_link }}" style="background:linear-gradient(90deg,#00d2ff,#7b5cff);color:#0d0630;font-weight:700;padding:12px 22px;border-radius:10px;text-decoration:none;display:inline-block;">Read the full article</a>
+</p>
+<p>Thank you for staying connected with us.</p>
+{% endblock %}
+{% block footer %}
+<p style="margin:0;"><a href="{{ unsubscribe_link }}" style="color:#00d2ff;">Unsubscribe</a> from these emails.</p>
+<p style="margin:16px 0 0 0;">&copy; {{ company_name }}. All rights reserved.</p>
+{% endblock %}

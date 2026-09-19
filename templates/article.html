@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }} | {{ company_name }}{% endblock %}
+{% block description %}{{ article.summary }}{% endblock %}
+{% block content %}
+<header class="hero page-hero" id="home">
+    <div class="container">
+        <div class="section-head" style="text-align:left;max-width:800px;margin:0;">
+            <h2>{{ article.title }}</h2>
+            <p>{{ article.summary }}</p>
+        </div>
+    </div>
+</header>
+
+<section>
+    <div class="container" style="max-width:800px;">
+        {% if article.featured_image %}
+        <img class="detail-hero-image" src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}" alt="{{ article.title }}">
+        {% endif %}
+        <div class="detail-meta">
+            {% if article.published_at %}Published {{ article.published_at.strftime('%B %d, %Y') }}{% endif %}
+            {% if article.author %} · By {{ article.author }}{% endif %}
+        </div>
+        <div class="detail-body">
+            {{ article.content | safe }}
+        </div>
+
+        <div style="margin-top:2.5rem;">
+            <a href="{{ url_for('public.news_list') }}" class="btn btn-ghost">&larr; Back to News</a>
+        </div>
+
+        {% if related %}
+        <h3 class="related-heading">More <span style="color:var(--cyan);">News</span></h3>
+        <div class="projects-grid">
+            {% for r in related %}
+            <article class="project-card reveal">
+                {% if r.featured_image %}
+                <img src="{{ url_for('public.uploaded_file', filename=r.featured_image) }}" alt="{{ r.title }}">
+                {% else %}
+                <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="{{ r.title }}">
+                {% endif %}
+                <div class="project-body">
+                    <h3>{{ r.title }}</h3>
+                    <p>{{ r.summary }}</p>
+                    <div class="project-tags">
+                        <a href="{{ url_for('public.news_detail', slug=r.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">Read More →</a>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
