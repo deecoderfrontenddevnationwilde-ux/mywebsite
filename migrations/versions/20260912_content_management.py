@@ -65,6 +65,11 @@ def upgrade():
         {"title": "UI / UX Design", "description": "Clean, intuitive interfaces with strong hierarchy and smooth interactions, from wireframes to polished production design.", "icon": "ri-palette-line", "display_order": 40, "active": True},
         {"title": "E-Commerce & Product Sites", "description": "Conversion-focused storefronts and product experiences with clear navigation, search, and responsive layouts.", "icon": "ri-store-2-line", "display_order": 50, "active": True},
         {"title": "Code Reviews & Audits", "description": "Structured reviews of code quality, security posture, performance, and maintainability with clear, actionable reports.", "icon": "ri-search-eye-line", "display_order": 60, "active": True},
+        {"title": "Website Maintenance & Support", "description": "Ongoing support, updates, bug fixes, and performance monitoring to keep your digital products stable, secure, and current.", "icon": "ri-tools-line", "display_order": 70, "active": True},
+        {"title": "API Integration & Automation", "description": "Seamless integrations between your systems, CRM, payment tools, and internal workflows to reduce manual work and improve speed.", "icon": "ri-plug-line", "display_order": 80, "active": True},
+        {"title": "Business Process Automation", "description": "Streamlined operations through workflow automation, smart task routing, and digital system orchestration that saves time and removes bottlenecks.", "icon": "ri-layout-grid-line", "display_order": 90, "active": True},
+        {"title": "Cloud Infrastructure & Deployment", "description": "Scalable cloud setup, deployment pipelines, and infrastructure optimization designed for reliability, speed, and future growth.", "icon": "ri-cloud-line", "display_order": 100, "active": True},
+        {"title": "Brand Strategy & Positioning", "description": "Clear positioning, messaging frameworks, and digital brand guidance that help your business stand out and convert more customers.", "icon": "ri-bullseye-line", "display_order": 110, "active": True},
     ])
 
     project_table = sa.table(

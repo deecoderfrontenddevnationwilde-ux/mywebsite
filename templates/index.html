@@ -40,7 +40,7 @@
             </div>
             <div class="services-grid">
                 {% for offer in service_offers %}
-                <article class="service-card reveal">
+                <article class="service-card reveal"{% if loop.index > 6 %} hidden{% endif %}>
                     <div class="icon"><i class="{{ offer.icon or 'ri-sparkling-line' }}"></i></div>
                     <h3>{{ offer.title }}</h3>
                     <p>{{ offer.description }}</p>
@@ -48,6 +48,11 @@
                 </article>
                 {% endfor %}
             </div>
+            {% if service_offers|length > 6 %}
+            <div class="services-toggle-wrap">
+                <button type="button" class="btn btn-ghost" id="servicesToggle" aria-expanded="false">Show More</button>
+            </div>
+            {% endif %}
         </div>
     </section>
 

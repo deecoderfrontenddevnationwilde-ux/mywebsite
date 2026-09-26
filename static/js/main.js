@@ -55,6 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
     document.querySelectorAll('.reveal, .skill-cat').forEach(el => revealObs.observe(el));
 
+    // Expand or collapse homepage service offers
+    const servicesToggle = document.getElementById('servicesToggle');
+    if (servicesToggle) {
+        const extraServices = document.querySelectorAll('#services .service-card:nth-child(n + 7)');
+        servicesToggle.addEventListener('click', () => {
+            const expanded = servicesToggle.getAttribute('aria-expanded') === 'true';
+            extraServices.forEach(card => { card.hidden = expanded; });
+            servicesToggle.setAttribute('aria-expanded', String(!expanded));
+            servicesToggle.textContent = expanded ? 'Show More' : 'Show Less';
+        });
+    }
+
     // Counters
     let counted = false;
     const counterObs = new IntersectionObserver((entries) => {

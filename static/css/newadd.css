@@ -820,6 +820,7 @@ section { padding: 4.5rem 0; }
     gap: 2.5rem;
     align-items: start;
 }
+.contact-grid > * { min-width: 0; }
 .contact-info h3 {
     font-size: 1.4rem;
     margin-bottom: 0.75rem;
@@ -835,6 +836,10 @@ section { padding: 4.5rem 0; }
     gap: 0.9rem;
     margin-bottom: 1.1rem;
     transition: transform 0.25s;
+}
+.contact-detail span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 .contact-detail:hover { transform: translateX(5px); }
 .contact-detail i {
@@ -902,6 +907,7 @@ footer {
     gap: 2rem;
     margin-bottom: 2.5rem;
 }
+.footer-top > * { min-width: 0; }
 .footer-brand h3 {
     font-size: 1.3rem;
     margin-bottom: 0.75rem;
@@ -953,6 +959,7 @@ footer {
 }
 .newsletter input {
     flex: 1;
+    min-width: 0;
     padding: 0.6rem 0.9rem;
     background: rgba(255,255,255,0.05);
     border: 1px solid var(--border);
@@ -979,6 +986,12 @@ footer {
     transform: scale(1.04);
     box-shadow: 0 0 14px rgba(0, 210, 255, 0.35);
 }
+.services-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+.services-toggle-wrap .btn { min-width: 9rem; }
 .footer-bottom {
     text-align: center;
     padding-top: 1.5rem;
@@ -1113,5 +1126,11 @@ footer {
         width: 100%;
         background: rgba(0, 210, 255, 0.06);
         padding-top: 0.9rem;
+    }
+}
+@media (max-width: 480px) {
+    .services-toggle-wrap .btn {
+        width: 100%;
+        max-width: 320px;
     }
 }
