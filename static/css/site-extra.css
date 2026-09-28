@@ -150,6 +150,53 @@
     font-size: 1.4rem;
 }
 
+/* Legal documents */
+.legal-page {
+    padding: 7.5rem 0 4rem;
+}
+.legal-heading {
+    max-width: 850px;
+    margin: 0 auto 2rem;
+}
+.legal-heading h1 {
+    margin-bottom: 0.65rem;
+}
+.legal-updated {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+.legal-content {
+    max-width: 850px;
+    margin: 0 auto;
+    color: var(--text);
+    line-height: 1.8;
+}
+.legal-content section {
+    padding: 1.35rem 0;
+    border-top: 1px solid var(--border);
+}
+.legal-content h2 {
+    margin-bottom: 0.55rem;
+    font-size: 1.2rem;
+}
+.legal-content p,
+.legal-content ul {
+    color: var(--muted);
+    margin: 0.5rem 0;
+}
+.legal-content ul {
+    padding-left: 1.35rem;
+}
+.legal-content a {
+    color: var(--cyan);
+    overflow-wrap: anywhere;
+}
+.legal-note {
+    padding: 0.85rem 1rem;
+    border-left: 3px solid var(--cyan);
+    background: var(--glass);
+}
+
 /* Simple 404/500 pages */
 .error-page {
     min-height: 60vh;

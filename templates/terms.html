@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service | {{ company_name }}{% endblock %}
+{% block description %}Terms governing access to and use of the Dee Coder Technologies website and its services.{% endblock %}
+{% block content %}
+<main class="legal-page">
+    <div class="container">
+        <header class="legal-heading">
+            <span class="hero-badge">Website policies</span>
+            <h1>Terms of <em>Service</em></h1>
+            <p class="legal-updated">Last Updated: September 28, 2026</p>
+        </header>
+
+        <article class="legal-content">
+            <p>These Terms of Service apply to your access to and use of the Dee Coder Technologies website, including its pages, content, contact form, newsletter, and any services or products described here (together, the “Website”). By using the Website, you agree to these terms. If you do not agree, please do not use it.</p>
+
+            <section>
+                <h2>1. Website Use and Acceptable Use</h2>
+                <p>You may use the Website for lawful, personal, and business-information purposes. You must not misuse it, interfere with its operation or security, attempt unauthorized access, introduce malicious code, send spam, or use it in a way that violates another person's rights or applicable law.</p>
+            </section>
+
+            <section>
+                <h2>2. Your Responsibilities</h2>
+                <p>If you send us a message or subscribe to updates, provide information that is accurate and that you are entitled to share. Do not include sensitive personal information unless it is needed for your enquiry. You are responsible for your use of the Website and for safeguarding any device or account you use to access it.</p>
+            </section>
+
+            <section>
+                <h2>3. Intellectual Property and Copyright</h2>
+                <p>Unless otherwise stated, the Website's text, design, graphics, and other materials are owned by Dee Coder Technologies or used with permission and are protected by applicable intellectual-property laws. You may view and use them for ordinary, non-commercial browsing. You may not copy, republish, distribute, modify, or commercially exploit Website materials without prior permission, except where the law permits.</p>
+                <p>Third-party names, marks, and materials remain the property of their respective owners. If you believe material on the Website infringes your rights, contact us using the details below with enough information for us to identify it.</p>
+            </section>
+
+            <section>
+                <h2>4. Advertisements and Third-Party Services</h2>
+                <p>The Website may display advertisements and use third-party services, including Google advertising services such as Google Ad Manager. Advertising may be selected using contextual information or, where enabled and permitted, information associated with your browser or device. Google and other advertising partners may use cookies or similar technologies and process information as described in our <a href="{{ url_for('public.privacy') }}">Privacy Policy</a> and their own privacy terms.</p>
+                <p>Advertisements and third-party services are provided by their respective operators. We do not endorse or control every advertised product or service, and any transaction or interaction you choose to have with an advertiser is between you and that third party.</p>
+            </section>
+
+            <section>
+                <h2>5. Links to Third-Party Websites</h2>
+                <p>The Website may link to sites or services that we do not operate. Links are provided for convenience and do not mean that we endorse those sites. We are not responsible for their content, availability, security, or practices. Review their terms and privacy information before using them.</p>
+            </section>
+
+            <section>
+                <h2>6. Limitation of Liability</h2>
+                <p>To the extent permitted by applicable law, the Website and its content are provided “as is” and “as available,” without warranties that the Website will be uninterrupted, error-free, or suitable for a particular purpose. Dee Coder Technologies will not be liable for indirect, incidental, special, or consequential loss arising from your use of, or inability to use, the Website. Nothing in these terms excludes liability that cannot lawfully be excluded.</p>
+            </section>
+
+            <section>
+                <h2>7. Website Availability</h2>
+                <p>We may change, suspend, or discontinue any part of the Website, including for maintenance, security, or operational reasons. We do not guarantee continuous availability or that content will always be current or free from errors.</p>
+            </section>
+
+            <section>
+                <h2>8. Termination of Access</h2>
+                <p>We may restrict or end access to the Website where reasonably necessary, including if these terms are breached or the Website's security or operation is at risk. You may stop using the Website at any time. Any provisions that by their nature should continue will remain effective after access ends.</p>
+            </section>
+
+            <section>
+                <h2>9. Changes to These Terms</h2>
+                <p>We may update these terms from time to time. The revised version will be posted on this page with a new “Last Updated” date. Your continued use of the Website after an update means you accept the revised terms.</p>
+            </section>
+
+            <section>
+                <h2>10. Governing Law</h2>
+                <p class="legal-note">The governing jurisdiction has not been specified on this Website. <strong>[Insert the governing jurisdiction before publication.]</strong> Subject to that completion and any mandatory legal requirements, these terms are intended to be interpreted under the laws of the stated jurisdiction.</p>
+            </section>
+
+            <section>
+                <h2>11. Contact</h2>
+                <p>For questions about these terms, contact Dee Coder Technologies at <a href="mailto:deecodertechnologiesworldwide@gmail.com">deecodertechnologiesworldwide@gmail.com</a>, use the <a href="{{ url_for('public.home') }}#contact">website contact form</a>, or message us on <a href="https://wa.me/2348075346224" target="_blank" rel="noopener">WhatsApp at +234 807 534 6224</a>.</p>
+            </section>
+        </article>
+    </div>
+</main>
+{% endblock %}

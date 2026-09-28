@@ -54,6 +54,16 @@ def home():
     )
 
 
+@public_bp.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@public_bp.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
 @public_bp.route("/news")
 def news_list():
     page = request.args.get("page", 1, type=int)
