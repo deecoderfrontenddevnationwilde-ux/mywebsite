@@ -1,31 +1,34 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}Featured Projects{% endblock %}
 {% block admin_content %}
-<div class="admin-toolbar">
-    <p class="admin-help-text">Manage the projects shown in the public Featured Projects section.</p>
-    <a href="{{ url_for('admin.projects_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add Project</a>
+<div class="content-admin-heading content-library-heading">
+    <div><p class="content-admin-eyebrow"><i class="ri-layout-grid-line" aria-hidden="true"></i> PROJECT PORTFOLIO</p><h2>Manage your projects</h2><p>Organize project cards, links, visibility, and display order on your website.</p></div>
+    <a href="{{ url_for('admin.projects_new') }}" class="a-btn a-btn-primary content-add-button"><i class="ri-add-line" aria-hidden="true"></i> Add Project</a>
 </div>
-<div class="admin-panel admin-table-wrap">
-    <table class="admin-table">
-        <thead><tr><th></th><th>Project</th><th>Category</th><th>Order</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-        {% for project in projects %}
-        <tr>
-            <td>{% if project.image and project.image.startswith('static:') %}<img class="thumb" src="{{ url_for('static', filename=project.image[7:]) }}" alt="">{% elif project.image %}<img class="thumb" src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="">{% else %}<div class="thumb"></div>{% endif %}</td>
-            <td><strong>{{ project.title }}</strong><br><span class="admin-help-text">{{ project.short_description|truncate(100) }}</span></td>
-            <td>{{ project.category or '—' }}</td>
-            <td>{{ project.display_order }}</td>
-            <td><span class="badge {{ 'badge-active' if project.active else 'badge-inactive' }}">{{ 'Active' if project.active else 'Inactive' }}</span></td>
-            <td class="admin-actions">
-                <a href="{{ url_for('admin.projects_edit', project_id=project.id) }}" class="a-btn a-btn-sm">Edit</a>
-                <form method="POST" action="{{ url_for('admin.projects_delete', project_id=project.id) }}" onsubmit="return confirmDelete('this project');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% else %}<tr class="empty-row"><td colspan="6">No featured projects yet. Add the first project above.</td></tr>{% endfor %}
-        </tbody>
-    </table>
+<div class="content-library-summary">
+    <div class="content-library-stat"><span class="content-stat-icon"><i class="ri-stack-line" aria-hidden="true"></i></span><div><strong>{{ projects|length }}</strong><span>{{ 'project' if projects|length == 1 else 'projects' }} in portfolio</span></div></div>
+    <label class="content-search"><i class="ri-search-line" aria-hidden="true"></i><input type="search" placeholder="Search projects..." aria-label="Search projects" data-content-search autocomplete="off"></label>
+</div>
+<div class="content-library-grid" data-content-library>
+    {% for project in projects %}
+    <article class="content-library-card" data-content-card data-content-search-text="{{ (project.title ~ ' ' ~ project.short_description ~ ' ' ~ (project.category or ''))|lower }}">
+        <div class="content-card-cover">
+            {% if project.image and project.image.startswith('static:') %}<img src="{{ url_for('static', filename=project.image[7:]) }}" alt="{{ project.title }} cover">
+            {% elif project.image %}<img src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="{{ project.title }} cover">
+            {% else %}<span class="content-card-cover-empty"><i class="ri-image-line" aria-hidden="true"></i> No cover image</span>{% endif %}
+            <span class="content-card-status {{ 'is-active' if project.active else 'is-inactive' }}"><i class="{{ 'ri-checkbox-circle-line' if project.active else 'ri-eye-off-line' }}" aria-hidden="true"></i> {{ 'Active' if project.active else 'Inactive' }}</span>
+        </div>
+        <div class="content-card-body">
+            <div class="content-card-title-row"><h3>{{ project.title }}</h3>{% if project.category %}<span class="content-category">{{ project.category }}</span>{% endif %}</div>
+            <p class="content-card-description">{{ project.short_description }}</p>
+            <div class="content-card-meta"><span><i class="ri-sort-asc" aria-hidden="true"></i> Order {{ project.display_order }}</span><span>{{ project.updated_at.strftime('%b %d, %Y') if project.updated_at else 'Date unavailable' }}</span></div>
+            <div class="content-card-links">{% if project.project_url %}<a href="{{ project.project_url }}" target="_blank" rel="noopener noreferrer"><i class="ri-external-link-line" aria-hidden="true"></i> Live site</a>{% endif %}{% if project.github_url %}<a href="{{ project.github_url }}" target="_blank" rel="noopener noreferrer"><i class="ri-github-line" aria-hidden="true"></i> Source</a>{% endif %}</div>
+            <div class="content-card-actions"><a href="{{ url_for('admin.projects_edit', project_id=project.id) }}" class="a-btn"><i class="ri-edit-line" aria-hidden="true"></i> Edit</a><form method="POST" action="{{ url_for('admin.projects_delete', project_id=project.id) }}" onsubmit="return confirmDelete('this project');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="a-btn a-btn-danger"><i class="ri-delete-bin-line" aria-hidden="true"></i> Delete</button></form></div>
+        </div>
+    </article>
+    {% else %}
+    <div class="content-library-empty"><span><i class="ri-layout-grid-line" aria-hidden="true"></i></span><h3>Your project portfolio is ready</h3><p>Add your first project to showcase it on your website.</p><a href="{{ url_for('admin.projects_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line" aria-hidden="true"></i> Add Project</a></div>
+    {% endfor %}
+    <p class="content-search-empty" data-content-search-empty hidden>No projects match your search.</p>
 </div>
 {% endblock %}

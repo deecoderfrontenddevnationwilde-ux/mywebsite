@@ -1,0 +1,50 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Product Videos{% endblock %}
+{% block admin_content %}
+<div class="video-admin-heading video-library-heading">
+    <div>
+        <p class="video-admin-eyebrow"><i class="ri-movie-2-line" aria-hidden="true"></i> VIDEO LIBRARY</p>
+        <h2>Manage your videos</h2>
+        <p class="video-admin-intro">Preview, edit, and manage the videos displayed on your website.</p>
+    </div>
+    <a href="{{ url_for('admin.videos_new') }}" class="a-btn a-btn-primary video-add-button"><i class="ri-add-line" aria-hidden="true"></i> Add Product Video</a>
+</div>
+
+<div class="video-library-summary">
+    <div class="video-library-stat"><span class="video-stat-icon"><i class="ri-video-line" aria-hidden="true"></i></span><div><strong>{{ videos|length }}</strong><span>{{ 'video' if videos|length == 1 else 'videos' }} in library</span></div></div>
+    <label class="video-search"><i class="ri-search-line" aria-hidden="true"></i><input type="search" placeholder="Search videos..." aria-label="Search videos" data-video-search autocomplete="off"></label>
+</div>
+
+<div class="video-library-grid" data-video-library>
+    {% for video in videos %}
+    <article class="video-library-card" data-video-card data-video-search-text="{{ (video.title ~ ' ' ~ video.description)|lower }}">
+        <div class="video-library-preview-wrap">
+            <video class="video-library-preview" controls playsinline preload="metadata" data-video-duration-source {% if video.thumbnail_path %}poster="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}"{% endif %} aria-label="Preview: {{ video.title }}">
+                <source src="{{ url_for('public.uploaded_file', filename=video.video_path) }}" type="{{ 'video/webm' if video.video_path.endswith('.webm') else 'video/mp4' }}">
+            </video>
+            <span class="video-library-duration" data-video-duration>Loading duration</span>
+        </div>
+        <div class="video-library-card-body">
+            <div class="video-library-title-row"><h3>{{ video.title }}</h3><span class="video-library-live"><span></span> Live</span></div>
+            <p class="video-library-description">{{ video.description }}</p>
+            <div class="video-library-meta"><span><i class="ri-calendar-line" aria-hidden="true"></i> {{ video.created_at.strftime('%b %d, %Y') if video.created_at else 'Date unavailable' }}</span><span>{{ 'WEBM' if video.video_path.endswith('.webm') else 'MP4' }}</span></div>
+            <div class="video-library-actions">
+                <a href="{{ url_for('admin.videos_edit', video_id=video.id) }}" class="a-btn"><i class="ri-edit-line" aria-hidden="true"></i> Edit</a>
+                <form method="POST" action="{{ url_for('admin.videos_delete', video_id=video.id) }}" onsubmit="return confirmDelete('this product video');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="a-btn a-btn-danger"><i class="ri-delete-bin-line" aria-hidden="true"></i> Delete</button>
+                </form>
+            </div>
+        </div>
+    </article>
+    {% else %}
+    <div class="video-library-empty" data-video-library-empty>
+        <span><i class="ri-video-add-line" aria-hidden="true"></i></span>
+        <h3>No product videos yet. Your library is ready</h3>
+        <p>Upload your first product video to have it appear here and on your website.</p>
+        <a href="{{ url_for('admin.videos_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line" aria-hidden="true"></i> Add Product Video</a>
+    </div>
+    {% endfor %}
+    <p class="video-search-empty" data-video-search-empty hidden>No videos match your search. Try another title or description.</p>
+</div>
+{% endblock %}

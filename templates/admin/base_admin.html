@@ -6,7 +6,7 @@
     <title>{% block title %}Admin | {{ company_name }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', v='20261010-content-management') }}">
 </head>
 <body class="admin-body">
     <div class="admin-shell">
@@ -18,6 +18,7 @@
                 <a href="{{ url_for('admin.projects_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.projects') else '' }}"><i class="ri-layout-grid-line"></i> Featured Projects</a>
                 <a href="{{ url_for('admin.news_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.news') else '' }}"><i class="ri-newspaper-line"></i> News</a>
                 <a href="{{ url_for('admin.products_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.products') else '' }}"><i class="ri-shopping-bag-line"></i> Products</a>
+                <a href="{{ url_for('admin.videos_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.videos') else '' }}"><i class="ri-video-line"></i> Product Videos</a>
                 <a href="{{ url_for('admin.subscribers_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.subscriber') else '' }}"><i class="ri-mail-star-line"></i> Subscribers</a>
                 <a href="{{ url_for('admin.messages_index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.message') else '' }}"><i class="ri-message-3-line"></i> Contact Messages</a>
                 <div class="divider"></div>
@@ -44,7 +45,7 @@
             </div>
         </main>
     </div>
-    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin.js', v='20261010-content-management') }}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

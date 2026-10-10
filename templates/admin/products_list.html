@@ -1,39 +1,15 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}Products{% endblock %}
 {% block admin_content %}
-<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-    <a href="{{ url_for('admin.products_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add Product</a>
-</div>
-<div class="admin-panel">
-    <table class="admin-table">
-        <thead><tr><th></th><th>Name</th><th>Price</th><th>Category</th><th>Featured</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-        {% for p in products %}
-            <tr>
-                <td>
-                    {% if p.image %}
-                    <img class="thumb" src="{{ url_for('public.uploaded_file', filename=p.image) }}" alt="">
-                    {% else %}
-                    <div class="thumb" style="background:rgba(255,255,255,0.05);"></div>
-                    {% endif %}
-                </td>
-                <td>{{ p.name }}</td>
-                <td>{{ '$%.2f'|format(p.price) if p.price is not none else '—' }}</td>
-                <td>{{ p.category or '—' }}</td>
-                <td>{{ 'Yes' if p.featured else 'No' }}</td>
-                <td><span class="badge {{ 'badge-published' if p.published else 'badge-draft' }}">{{ 'Published' if p.published else 'Draft' }}</span></td>
-                <td style="white-space:nowrap;">
-                    <a href="{{ url_for('admin.products_edit', product_id=p.id) }}" class="a-btn a-btn-sm">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.products_delete', product_id=p.id) }}" style="display:inline;" onsubmit="return confirmDelete('this product');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-        {% else %}
-            <tr class="empty-row"><td colspan="7">No products yet. Click "Add Product" to create your first one.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="content-admin-heading content-library-heading"><div><p class="content-admin-eyebrow"><i class="ri-shopping-bag-3-line" aria-hidden="true"></i> PRODUCT CATALOG</p><h2>Manage your products</h2><p>Keep product details, pricing, publication, and featured placement up to date.</p></div><a href="{{ url_for('admin.products_new') }}" class="a-btn a-btn-primary content-add-button"><i class="ri-add-line" aria-hidden="true"></i> Add Product</a></div>
+<div class="content-library-summary"><div class="content-library-stat"><span class="content-stat-icon"><i class="ri-archive-line" aria-hidden="true"></i></span><div><strong>{{ products|length }}</strong><span>{{ 'product' if products|length == 1 else 'products' }} in catalog</span></div></div><label class="content-search"><i class="ri-search-line" aria-hidden="true"></i><input type="search" placeholder="Search products..." aria-label="Search products" data-content-search autocomplete="off"></label></div>
+<div class="content-library-grid" data-content-library>
+    {% for product in products %}
+    <article class="content-library-card" data-content-card data-content-search-text="{{ (product.name ~ ' ' ~ (product.short_description or '') ~ ' ' ~ product.description ~ ' ' ~ (product.category or ''))|lower }}">
+        <div class="content-card-cover">{% if product.image %}<img src="{{ url_for('public.uploaded_file', filename=product.image) }}" alt="{{ product.name }}">{% else %}<span class="content-card-cover-empty"><i class="ri-image-line" aria-hidden="true"></i> No product image</span>{% endif %}{% if product.featured %}<span class="content-card-featured"><i class="ri-star-fill" aria-hidden="true"></i> Featured</span>{% endif %}<span class="content-card-status {{ 'is-active' if product.published else 'is-inactive' }}"><i class="{{ 'ri-checkbox-circle-line' if product.published else 'ri-eye-off-line' }}" aria-hidden="true"></i> {{ 'Published' if product.published else 'Draft' }}</span></div>
+        <div class="content-card-body"><div class="content-card-title-row"><h3>{{ product.name }}</h3>{% if product.price is not none %}<span class="content-price-tag">${{ '%.2f'|format(product.price) }}</span>{% endif %}</div><p class="content-card-description">{{ product.short_description or product.description }}</p><div class="content-card-meta"><span>{{ product.category or 'Uncategorized' }}</span><span>{{ product.stock_status|replace('_', ' ')|title }}</span></div><div class="content-card-actions">{% if product.published %}<a href="{{ url_for('public.product_detail', slug=product.slug) }}" target="_blank" rel="noopener noreferrer" class="a-btn"><i class="ri-eye-line" aria-hidden="true"></i> Preview</a>{% endif %}<a href="{{ url_for('admin.products_edit', product_id=product.id) }}" class="a-btn"><i class="ri-edit-line" aria-hidden="true"></i> Edit</a><form method="POST" action="{{ url_for('admin.products_delete', product_id=product.id) }}" onsubmit="return confirmDelete('this product');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="a-btn a-btn-danger"><i class="ri-delete-bin-line" aria-hidden="true"></i> Delete</button></form></div></div>
+    </article>
+    {% else %}<div class="content-library-empty"><span><i class="ri-shopping-bag-3-line" aria-hidden="true"></i></span><h3>Your product catalog is ready</h3><p>Create your first product to begin presenting it to visitors.</p><a href="{{ url_for('admin.products_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line" aria-hidden="true"></i> Add Product</a></div>{% endfor %}
+    <p class="content-search-empty" data-content-search-empty hidden>No products match your search.</p>
 </div>
 {% endblock %}

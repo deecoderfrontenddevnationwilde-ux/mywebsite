@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Upload Too Large | {{ company_name }}{% endblock %}
+{% block content %}
+<main class="error-page">
+    <div>
+        <h1>Upload Too Large</h1>
+        <p>{{ message or 'The submitted file exceeds the configured upload limit.' }}</p>
+        <p>Select a file no larger than {{ limit_mb }} MB for this request, or increase the configured limit if your hosting storage allows it.</p>
+        <a class="btn btn-primary" href="{{ url_for('admin.videos_index') }}">Return to video management</a>
+    </div>
+</main>
+{% endblock %}

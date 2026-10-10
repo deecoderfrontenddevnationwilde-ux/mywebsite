@@ -306,6 +306,9 @@
                 </article>
                 {% endfor %}
             </div>
+            <div class="listing-actions">
+                <a href="{{ url_for('public.projects_list') }}" class="btn btn-primary">View All Projects</a>
+            </div>
         </div>
     </section>
 
@@ -387,12 +390,12 @@
                 </article>
                 {% endfor %}
             </div>
-            <div style="text-align:center;margin-top:2.5rem;">
-                <a href="{{ url_for('public.news_list') }}" class="btn btn-primary">View All News</a>
-            </div>
             {% else %}
             <div class="empty-state">No news articles published yet. Check back soon!</div>
             {% endif %}
+            <div class="listing-actions">
+                <a href="{{ url_for('public.news_list') }}" class="btn btn-primary">View All News</a>
+            </div>
         </div>
     </section>
 
@@ -415,21 +418,83 @@
                     {% endif %}
                     <div class="project-body">
                         <h3>{{ product.name }}</h3>
-                        <p>{{ product.short_description or (product.description[:120] ~ '...') }}</p>
+                        <p>{{ product.short_description or product.description }}</p>
                         {% if product.price %}<div class="card-price">${{ '%.2f'|format(product.price) }}</div>{% endif %}
                         <div class="project-tags">
-                            <a href="{{ url_for('public.product_detail', slug=product.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">View Product →</a>
+                            <a href="{{ url_for('public.product_detail', slug=product.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">Read More →</a>
                         </div>
                     </div>
                 </article>
                 {% endfor %}
             </div>
-            <div style="text-align:center;margin-top:2.5rem;">
-                <a href="{{ url_for('public.products_list') }}" class="btn btn-primary">View All Products</a>
-            </div>
             {% else %}
             <div class="empty-state">No products published yet. Check back soon!</div>
             {% endif %}
+            <div class="listing-actions">
+                <a href="{{ url_for('public.products_list') }}" class="btn btn-primary">View All Products</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRODUCT VIDEO PREVIEWS (dynamic) -->
+    <section id="product-videos">
+        <div class="container">
+            <div class="section-head">
+                <h2>Product <span>Video Previews</span></h2>
+                <p>Watch a closer look at products available from Dee Coder Technologies.</p>
+            </div>
+            {% if product_videos %}
+            <div class="projects-grid product-video-grid">
+                {% for video in product_videos %}
+                <article class="product-video-card reveal">
+                    <div class="product-video-player" data-video-player>
+                        {% if video.thumbnail_path %}
+                        <video id="product-video-{{ video.id }}" playsinline preload="metadata" poster="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}" aria-label="{{ video.title }}" tabindex="0">
+                        {% else %}
+                        <video id="product-video-{{ video.id }}" playsinline preload="metadata" aria-label="{{ video.title }}" tabindex="0">
+                        {% endif %}
+                            <source src="{{ url_for('public.uploaded_file', filename=video.video_path) }}" type="{{ 'video/webm' if video.video_path.endswith('.webm') else 'video/mp4' }}">
+                            Your browser does not support HTML5 video.
+                        </video>
+                        <button class="product-video-overlay-play" type="button" data-video-play aria-label="Play {{ video.title }}" aria-controls="product-video-{{ video.id }}">
+                            <i class="ri-play-fill" aria-hidden="true"></i>
+                        </button>
+                        <div class="product-video-controls" role="group" aria-label="Video controls for {{ video.title }}">
+                            <button class="product-video-control" type="button" data-video-play aria-label="Play {{ video.title }}" aria-controls="product-video-{{ video.id }}">
+                                <i class="ri-play-fill" aria-hidden="true"></i>
+                            </button>
+                            <div class="product-video-seek" data-video-seek role="slider" tabindex="0" aria-label="Seek {{ video.title }}" aria-controls="product-video-{{ video.id }}" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00 of 0:00" aria-disabled="true">
+                                <span class="product-video-seek-rail" aria-hidden="true">
+                                    <span class="product-video-seek-played" data-video-played></span>
+                                    <span class="product-video-seek-handle"></span>
+                                </span>
+                            </div>
+                            <span class="product-video-time" data-video-time aria-live="off">0:00 / 0:00</span>
+                            <button class="product-video-control" type="button" data-video-mute aria-label="Mute {{ video.title }}" aria-pressed="false">
+                                <i class="ri-volume-up-line" aria-hidden="true"></i>
+                            </button>
+                            <div class="product-video-volume">
+                                <input type="range" min="0" max="1" value="1" step="0.05" data-video-volume aria-label="Volume for {{ video.title }}">
+                            </div>
+                            <button class="product-video-control" type="button" data-video-fullscreen aria-label="Enter fullscreen for {{ video.title }}">
+                                <i class="ri-fullscreen-line" aria-hidden="true"></i>
+                            </button>
+                            <span class="sr-only" data-video-status role="status"></span>
+                        </div>
+                    </div>
+                    <div class="product-video-copy">
+                        <h3>{{ video.title }}</h3>
+                        <p>{{ video.description }}</p>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">Product video previews will appear here when available.</div>
+            {% endif %}
+            <div class="listing-actions">
+                <a href="{{ url_for('public.video_list') }}" class="btn btn-primary">View All Videos</a>
+            </div>
         </div>
     </section>
 
@@ -488,7 +553,7 @@
             <div class="faq-list">
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        How long does a typical project take?
+                        <span>How long does a typical project take?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">
@@ -497,7 +562,7 @@
                 </div>
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        Do I need to provide designs?
+                        <span>Do I need to provide designs?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">
@@ -506,7 +571,7 @@
                 </div>
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        What do you use to build sites?
+                        <span>What do you use to build sites?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">
@@ -515,7 +580,7 @@
                 </div>
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        Can you review my existing code?
+                        <span>Can you review my existing code?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">
@@ -524,7 +589,7 @@
                 </div>
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        How do payments work?
+                        <span>How do payments work?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">
@@ -533,7 +598,7 @@
                 </div>
                 <div class="faq-item reveal">
                     <button class="faq-question" aria-expanded="false">
-                        Do you work with clients outside Nigeria?
+                        <span>Do you work with clients outside Nigeria?</span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="faq-answer">

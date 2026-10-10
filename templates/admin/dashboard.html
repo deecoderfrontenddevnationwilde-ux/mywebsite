@@ -8,6 +8,7 @@
     <div class="admin-stat-card"><div class="value">{{ stats.published_news }}</div><div class="label">Published News</div></div>
     <div class="admin-stat-card"><div class="value">{{ stats.total_products }}</div><div class="label">Total Products</div></div>
     <div class="admin-stat-card"><div class="value">{{ stats.published_products }}</div><div class="label">Published Products</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.total_product_videos }}</div><div class="label">Product Videos</div><a href="{{ url_for('admin.videos_index') }}" class="admin-stat-link">Manage videos</a></div>
     <div class="admin-stat-card"><div class="value">{{ stats.total_subscribers }}</div><div class="label">Active Subscribers</div></div>
     <div class="admin-stat-card"><div class="value">{{ stats.pending_messages }}</div><div class="label">Pending Messages</div></div>
     <div class="admin-stat-card"><div class="value">{{ stats.approved_messages }}</div><div class="label">Approved Messages</div></div>

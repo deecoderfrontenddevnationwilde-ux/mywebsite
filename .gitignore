@@ -16,8 +16,12 @@ instance/*.sqlite3
 # Uploaded files (keep the folders, ignore the contents)
 uploads/news/*
 uploads/products/*
+uploads/videos/*
+uploads/video-thumbnails/*
 !uploads/news/.gitkeep
 !uploads/products/.gitkeep
+!uploads/videos/.gitkeep
+!uploads/video-thumbnails/.gitkeep
 
 # Migrations cache
 migrations/__pycache__/

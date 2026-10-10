@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Video Previews | {{ company_name }}{% endblock %}
+{% block content %}
+<header class="hero page-hero" id="home">
+    <div class="container">
+        <div class="section-head">
+            <h2>Product <span>Video Previews</span></h2>
+            <p>Explore the full video collection from Dee Coder Technologies.</p>
+        </div>
+    </div>
+</header>
+
+<section>
+    <div class="container">
+        {% if videos %}
+        <div class="projects-grid product-video-grid">
+            {% for video in videos %}
+            <article class="product-video-card reveal">
+                <div class="product-video-player" data-video-player>
+                    {% if video.thumbnail_path %}
+                    <video id="product-video-{{ video.id }}" playsinline preload="metadata" poster="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}" aria-label="{{ video.title }}" tabindex="0">
+                    {% else %}
+                    <video id="product-video-{{ video.id }}" playsinline preload="metadata" aria-label="{{ video.title }}" tabindex="0">
+                    {% endif %}
+                        <source src="{{ url_for('public.uploaded_file', filename=video.video_path) }}" type="{{ 'video/webm' if video.video_path.endswith('.webm') else 'video/mp4' }}">
+                        Your browser does not support HTML5 video.
+                    </video>
+                    <button class="product-video-overlay-play" type="button" data-video-play aria-label="Play {{ video.title }}" aria-controls="product-video-{{ video.id }}">
+                        <i class="ri-play-fill" aria-hidden="true"></i>
+                    </button>
+                    <div class="product-video-controls" role="group" aria-label="Video controls for {{ video.title }}">
+                        <button class="product-video-control" type="button" data-video-play aria-label="Play {{ video.title }}" aria-controls="product-video-{{ video.id }}">
+                            <i class="ri-play-fill" aria-hidden="true"></i>
+                        </button>
+                        <div class="product-video-seek" data-video-seek role="slider" tabindex="0" aria-label="Seek {{ video.title }}" aria-controls="product-video-{{ video.id }}" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0:00 of 0:00" aria-disabled="true">
+                            <span class="product-video-seek-rail" aria-hidden="true">
+                                <span class="product-video-seek-played" data-video-played></span>
+                                <span class="product-video-seek-handle"></span>
+                            </span>
+                        </div>
+                        <span class="product-video-time" data-video-time aria-live="off">0:00 / 0:00</span>
+                        <button class="product-video-control" type="button" data-video-mute aria-label="Mute {{ video.title }}" aria-pressed="false">
+                            <i class="ri-volume-up-line" aria-hidden="true"></i>
+                        </button>
+                        <div class="product-video-volume">
+                            <input type="range" min="0" max="1" value="1" step="0.05" data-video-volume aria-label="Volume for {{ video.title }}">
+                        </div>
+                        <button class="product-video-control" type="button" data-video-fullscreen aria-label="Enter fullscreen for {{ video.title }}">
+                            <i class="ri-fullscreen-line" aria-hidden="true"></i>
+                        </button>
+                        <span class="sr-only" data-video-status role="status"></span>
+                    </div>
+                </div>
+                <div class="product-video-copy">
+                    <h3>{{ video.title }}</h3>
+                    <p>{{ video.description }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% if pagination.pages > 1 %}
+        <nav class="pagination" aria-label="Video pages">
+            {% if pagination.has_prev %}
+                <a href="{{ url_for('public.video_list', page=pagination.prev_num) }}">&laquo; Prev</a>
+            {% else %}
+                <span class="disabled">&laquo; Prev</span>
+            {% endif %}
+            {% for page_number in pagination.iter_pages() %}
+                {% if page_number %}
+                    {% if page_number == pagination.page %}
+                        <span class="current" aria-current="page">{{ page_number }}</span>
+                    {% else %}
+                        <a href="{{ url_for('public.video_list', page=page_number) }}">{{ page_number }}</a>
+                    {% endif %}
+                {% else %}
+                    <span aria-hidden="true">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+                <a href="{{ url_for('public.video_list', page=pagination.next_num) }}">Next &raquo;</a>
+            {% else %}
+                <span class="disabled">Next &raquo;</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">Video previews will appear here when available.</div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

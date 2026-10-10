@@ -1,12 +1,17 @@
+import os
+import shutil
+import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
+from werkzeug.datastructures import FileStorage
+from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import db
-from models import AdminUser, ContactMessage, FeaturedProject, News, Product, ServiceOffer, Subscriber
+from models import AdminUser, ContactMessage, FeaturedProject, News, Product, ProductVideo, ServiceOffer, Subscriber
 from auth import login_admin, logout_admin, login_required, get_current_admin
-from utils import make_unique_slug, save_uploaded_image
+from utils import delete_uploaded_file, make_unique_slug, save_uploaded_image, save_uploaded_video
 from services.email_service import (
     send_new_news_notification,
     send_contact_approval_notification,
@@ -62,6 +67,7 @@ def dashboard():
         "published_news": News.query.filter_by(published=True).count(),
         "total_products": Product.query.count(),
         "published_products": Product.query.filter_by(published=True).count(),
+        "total_product_videos": ProductVideo.query.count(),
         "total_subscribers": Subscriber.query.filter_by(subscribed=True).count(),
         "pending_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_PENDING).count(),
         "approved_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_APPROVED).count(),
@@ -207,15 +213,19 @@ def _project_from_request(project=None):
     short_description = (request.form.get("short_description") or "").strip()
     if not title or not short_description:
         flash("Title and short description are required.", "error")
-        return None, ""
+        return None, "Project title and short description are required."
     try:
         project_url = _optional_url(request.form.get("project_url"), "Project URL")
         github_url = _optional_url(request.form.get("github_url"), "GitHub URL")
         display_order = int(request.form.get("display_order") or 0)
-        image_path = save_uploaded_image(request.files.get("image"), "projects")
+        image_path = save_uploaded_image(
+            request.files.get("image"),
+            "projects",
+            max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+        )
     except ValueError as error:
         flash(str(error) if "URL" in str(error) or "image" in str(error).lower() else "Display order must be a whole number.", "error")
-        return None, ""
+        return None, str(error)
     if project is None:
         project = FeaturedProject()
     project.title = title
@@ -255,7 +265,11 @@ def news_new():
             return render_template("admin/news_form.html", article=None, form=request.form)
 
         try:
-            image_path = save_uploaded_image(request.files.get("featured_image"), "news")
+            image_path = save_uploaded_image(
+                request.files.get("featured_image"),
+                "news",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
         except ValueError as e:
             flash(str(e), "error")
             return render_template("admin/news_form.html", article=None, form=request.form)
@@ -300,7 +314,11 @@ def news_edit(article_id):
             return render_template("admin/news_form.html", article=article, form=request.form)
 
         try:
-            image_path = save_uploaded_image(request.files.get("featured_image"), "news")
+            image_path = save_uploaded_image(
+                request.files.get("featured_image"),
+                "news",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
         except ValueError as e:
             flash(str(e), "error")
             return render_template("admin/news_form.html", article=article, form=request.form)
@@ -378,12 +396,16 @@ def products_new():
         short_description = (request.form.get("short_description") or "").strip()
         price_raw = (request.form.get("price") or "").strip()
         category = (request.form.get("category") or "").strip()
+        stock_status = request.form.get("stock_status") or "in_stock"
         featured = request.form.get("featured") == "on"
         publish = request.form.get("published") == "on"
         notify = request.form.get("notify_on_publish") == "on"
 
         if not name or not description:
             flash("Name and description are required.", "error")
+            return render_template("admin/product_form.html", product=None, form=request.form)
+        if stock_status not in {"in_stock", "out_of_stock"}:
+            flash("Choose a valid product availability status.", "error")
             return render_template("admin/product_form.html", product=None, form=request.form)
 
         price = None
@@ -395,7 +417,11 @@ def products_new():
                 return render_template("admin/product_form.html", product=None, form=request.form)
 
         try:
-            image_path = save_uploaded_image(request.files.get("image"), "products")
+            image_path = save_uploaded_image(
+                request.files.get("image"),
+                "products",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
         except ValueError as e:
             flash(str(e), "error")
             return render_template("admin/product_form.html", product=None, form=request.form)
@@ -407,6 +433,7 @@ def products_new():
             short_description=short_description,
             price=price,
             category=category or None,
+            stock_status=stock_status,
             image=image_path,
             featured=featured,
             published=publish,
@@ -437,12 +464,16 @@ def products_edit(product_id):
         short_description = (request.form.get("short_description") or "").strip()
         price_raw = (request.form.get("price") or "").strip()
         category = (request.form.get("category") or "").strip()
+        stock_status = request.form.get("stock_status") or "in_stock"
         featured = request.form.get("featured") == "on"
         publish = request.form.get("published") == "on"
         notify = request.form.get("notify_on_publish") == "on"
 
         if not name or not description:
             flash("Name and description are required.", "error")
+            return render_template("admin/product_form.html", product=product, form=request.form)
+        if stock_status not in {"in_stock", "out_of_stock"}:
+            flash("Choose a valid product availability status.", "error")
             return render_template("admin/product_form.html", product=product, form=request.form)
 
         price = product.price
@@ -456,7 +487,11 @@ def products_edit(product_id):
             price = None
 
         try:
-            image_path = save_uploaded_image(request.files.get("image"), "products")
+            image_path = save_uploaded_image(
+                request.files.get("image"),
+                "products",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
         except ValueError as e:
             flash(str(e), "error")
             return render_template("admin/product_form.html", product=product, form=request.form)
@@ -470,6 +505,7 @@ def products_edit(product_id):
         product.short_description = short_description
         product.price = price
         product.category = category or None
+        product.stock_status = stock_status
         product.featured = featured
         product.notify_on_publish = notify
         if image_path:
@@ -501,6 +537,345 @@ def products_delete(product_id):
     db.session.commit()
     flash("Product deleted.", "success")
     return redirect(url_for("admin.products_index"))
+
+
+# ------------------------------------------------------ PRODUCT VIDEOS ----
+
+@admin_bp.route("/videos")
+@login_required
+def videos_index():
+    videos = ProductVideo.query.order_by(ProductVideo.created_at.desc(), ProductVideo.id.desc()).all()
+    return render_template("admin/videos_list.html", videos=videos)
+
+
+@admin_bp.route("/videos/add", methods=["GET", "POST"])
+@admin_bp.route("/videos/new", methods=["GET", "POST"])
+@login_required
+def videos_new():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        video_upload = request.files.get("video")
+
+        if not title or len(title) > 200 or not description:
+            flash("Enter a title (up to 200 characters) and a short description.", "error")
+            return render_template("admin/video_form.html", video=None, form=request.form)
+        if not video_upload or not video_upload.filename:
+            flash("Choose an MP4 or WEBM video to upload.", "error")
+            return render_template("admin/video_form.html", video=None, form=request.form)
+
+        saved_paths = []
+        try:
+            thumbnail_path = save_uploaded_image(
+                request.files.get("thumbnail"),
+                "video-thumbnails",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
+            if thumbnail_path:
+                saved_paths.append(thumbnail_path)
+            video_path = save_uploaded_video(video_upload)
+            saved_paths.append(video_path)
+        except ValueError as error:
+            _remove_video_uploads(saved_paths)
+            flash(str(error), "error")
+            return render_template("admin/video_form.html", video=None, form=request.form)
+        except OSError:
+            _remove_video_uploads(saved_paths)
+            current_app.logger.exception("Could not store uploaded product video media.")
+            flash("The upload could not be stored. Check available storage and try again.", "error")
+            return render_template("admin/video_form.html", video=None, form=request.form)
+
+        product_video = ProductVideo(
+            title=title,
+            description=description,
+            video_path=video_path,
+            thumbnail_path=thumbnail_path,
+        )
+        db.session.add(product_video)
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            _remove_video_uploads(saved_paths)
+            current_app.logger.exception("Could not save product video record.")
+            flash("The video could not be saved. Please try again.", "error")
+            return render_template("admin/video_form.html", video=None, form=request.form)
+
+        flash("Product video uploaded.", "success")
+        return redirect(url_for("admin.videos_index"))
+
+    return render_template("admin/video_form.html", video=None, form={})
+
+
+def _video_staging_directory(upload_id):
+    try:
+        normalized_id = str(uuid.UUID(upload_id))
+    except (ValueError, AttributeError, TypeError):
+        return None
+    return os.path.join(current_app.config["UPLOAD_FOLDER"], ".video-staging", normalized_id)
+
+
+@admin_bp.route("/videos/upload-chunk", methods=["POST"])
+@login_required
+def videos_upload_chunk():
+    upload_id = request.form.get("upload_id", "")
+    staging_dir = _video_staging_directory(upload_id)
+    if staging_dir is None:
+        return jsonify(success=False, message="Invalid upload session."), 400
+
+    try:
+        chunk_index = int(request.form.get("chunk_index", ""))
+    except ValueError:
+        return jsonify(success=False, message="Invalid video chunk index."), 400
+    chunk_size = current_app.config["VIDEO_UPLOAD_CHUNK_MB"] * 1024 * 1024
+    max_size = current_app.config["MAX_VIDEO_UPLOAD_MB"] * 1024 * 1024
+    max_chunks = (max_size + chunk_size - 1) // chunk_size
+    if chunk_index < 0 or chunk_index >= max_chunks:
+        return jsonify(success=False, message="Video upload exceeds the configured size limit."), 413
+
+    chunk = request.files.get("chunk")
+    if not chunk or not chunk.filename:
+        return jsonify(success=False, message="The video upload chunk is missing."), 400
+
+    os.makedirs(staging_dir, exist_ok=True)
+    chunk_path = os.path.join(staging_dir, f"{chunk_index:08d}.part")
+    chunk.stream.seek(0, os.SEEK_END)
+    chunk_length = chunk.stream.tell()
+    chunk.stream.seek(0)
+    existing_size = sum(
+        os.path.getsize(os.path.join(staging_dir, name))
+        for name in os.listdir(staging_dir)
+        if name.endswith(".part") and name != os.path.basename(chunk_path)
+    )
+    if chunk_length == 0:
+        return jsonify(success=False, message="The video upload chunk is empty."), 400
+    if chunk_length > chunk_size or existing_size + chunk_length > max_size:
+        return jsonify(success=False, message=f"Video exceeds the {current_app.config['MAX_VIDEO_UPLOAD_MB']} MB upload limit."), 413
+
+    try:
+        chunk.save(chunk_path)
+    except OSError:
+        current_app.logger.exception("Could not store video upload chunk.")
+        return jsonify(success=False, message="The video chunk could not be stored. Check available storage."), 500
+    return jsonify(success=True, chunk_index=chunk_index)
+
+
+@admin_bp.route("/videos/upload-complete", methods=["POST"])
+@login_required
+def videos_upload_complete():
+    payload = request.form
+    upload_id = payload.get("upload_id", "")
+    original_filename = payload.get("filename", "")
+    video_id = payload.get("video_id", type=int)
+    staging_dir = _video_staging_directory(upload_id)
+    if staging_dir is None:
+        return jsonify(success=False, message="Invalid upload session."), 400
+    if not isinstance(original_filename, str) or not original_filename or len(original_filename) > 255:
+        return jsonify(success=False, message="Invalid video filename."), 400
+
+    title = (payload.get("title") or "").strip()
+    description = (payload.get("description") or "").strip()
+    if not title or len(title) > 200 or not description:
+        return jsonify(success=False, message="Enter a title (up to 200 characters) and a short description."), 400
+    product_video = ProductVideo.query.get(video_id) if video_id is not None else None
+    if video_id is not None and product_video is None:
+        return jsonify(success=False, message="The product video to update was not found."), 404
+
+    try:
+        chunk_count = int(payload.get("chunk_count", 0))
+    except (TypeError, ValueError):
+        return jsonify(success=False, message="Invalid video upload details."), 400
+    chunk_size = current_app.config["VIDEO_UPLOAD_CHUNK_MB"] * 1024 * 1024
+    max_size = current_app.config["MAX_VIDEO_UPLOAD_MB"] * 1024 * 1024
+    if chunk_count < 1 or chunk_count > (max_size + chunk_size - 1) // chunk_size:
+        return jsonify(success=False, message=f"Video exceeds the {current_app.config['MAX_VIDEO_UPLOAD_MB']} MB upload limit."), 413
+
+    assembled_path = os.path.join(staging_dir, "assembled-upload")
+    total_size = 0
+    saved_paths = []
+    previous_video_path = product_video.video_path if product_video else None
+    previous_thumbnail_path = product_video.thumbnail_path if product_video else None
+    try:
+        with open(assembled_path, "wb") as assembled:
+            for index in range(chunk_count):
+                chunk_path = os.path.join(staging_dir, f"{index:08d}.part")
+                if not os.path.isfile(chunk_path):
+                    return jsonify(success=False, message=f"Video upload is incomplete (missing chunk {index + 1})."), 400
+                chunk_length = os.path.getsize(chunk_path)
+                if chunk_length > chunk_size or total_size + chunk_length > max_size:
+                    return jsonify(success=False, message=f"Video exceeds the {current_app.config['MAX_VIDEO_UPLOAD_MB']} MB upload limit."), 413
+                total_size += chunk_length
+                with open(chunk_path, "rb") as part:
+                    shutil.copyfileobj(part, assembled)
+        with open(assembled_path, "rb") as stream:
+            video_path = save_uploaded_video(FileStorage(stream=stream, filename=original_filename))
+        saved_paths.append(video_path)
+        thumbnail_path = save_uploaded_image(
+            request.files.get("thumbnail"),
+            "video-thumbnails",
+            max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+        )
+        if thumbnail_path:
+            saved_paths.append(thumbnail_path)
+        if product_video is None:
+            product_video = ProductVideo(
+                title=title,
+                description=description,
+                video_path=video_path,
+                thumbnail_path=thumbnail_path,
+            )
+            db.session.add(product_video)
+        else:
+            product_video.title = title
+            product_video.description = description
+            product_video.video_path = video_path
+            if thumbnail_path:
+                product_video.thumbnail_path = thumbnail_path
+            elif payload.get("remove_thumbnail") == "on":
+                product_video.thumbnail_path = None
+        db.session.commit()
+    except ValueError as error:
+        db.session.rollback()
+        _remove_video_uploads(saved_paths)
+        current_app.logger.info("Rejected chunked product video upload: %s", error)
+        return jsonify(success=False, message=str(error)), 400
+    except OSError:
+        db.session.rollback()
+        _remove_video_uploads(saved_paths)
+        current_app.logger.exception("Could not store chunked product video upload.")
+        return jsonify(success=False, message="The video could not be stored. Check available storage and try again."), 500
+    except SQLAlchemyError:
+        db.session.rollback()
+        _remove_video_uploads(saved_paths)
+        current_app.logger.exception("Could not save chunked product video record.")
+        return jsonify(success=False, message="The video could not be saved. Please try again."), 500
+    finally:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+
+    if previous_video_path and previous_video_path != product_video.video_path:
+        _remove_video_upload(previous_video_path)
+    if previous_thumbnail_path and previous_thumbnail_path != product_video.thumbnail_path:
+        _remove_video_upload(previous_thumbnail_path)
+    success_message = "Product video updated." if video_id is not None else "Product video uploaded."
+    flash(success_message, "success")
+    return jsonify(success=True, message=success_message, redirect_url=url_for("admin.videos_index"))
+
+
+@admin_bp.route("/videos/upload-abort", methods=["POST"])
+@login_required
+def videos_upload_abort():
+    staging_dir = _video_staging_directory(request.form.get("upload_id", ""))
+    if staging_dir is None:
+        return jsonify(success=False, message="Invalid upload session."), 400
+    try:
+        shutil.rmtree(staging_dir, ignore_errors=False)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        current_app.logger.exception("Could not clean up an abandoned video upload.")
+        return jsonify(success=False, message="Could not clean up the incomplete video upload."), 500
+    return jsonify(success=True)
+
+
+@admin_bp.route("/videos/<int:video_id>/edit", methods=["GET", "POST"])
+@login_required
+def videos_edit(video_id):
+    video = ProductVideo.query.get_or_404(video_id)
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        video_upload = request.files.get("video")
+        thumbnail_upload = request.files.get("thumbnail")
+
+        if not title or len(title) > 200 or not description:
+            flash("Enter a title (up to 200 characters) and a short description.", "error")
+            return render_template("admin/video_form.html", video=video, form=request.form)
+
+        saved_paths = []
+        try:
+            thumbnail_path = save_uploaded_image(
+                thumbnail_upload,
+                "video-thumbnails",
+                max_size_bytes=current_app.config["MAX_UPLOAD_MB"] * 1024 * 1024,
+            )
+            if thumbnail_path:
+                saved_paths.append(thumbnail_path)
+            video_path = save_uploaded_video(video_upload)
+            if video_path:
+                saved_paths.append(video_path)
+        except ValueError as error:
+            _remove_video_uploads(saved_paths)
+            flash(str(error), "error")
+            return render_template("admin/video_form.html", video=video, form=request.form)
+        except OSError:
+            _remove_video_uploads(saved_paths)
+            current_app.logger.exception("Could not store updated product video media.")
+            flash("The upload could not be stored. Check available storage and try again.", "error")
+            return render_template("admin/video_form.html", video=video, form=request.form)
+
+        previous_video_path = video.video_path
+        previous_thumbnail_path = video.thumbnail_path
+        video.title = title
+        video.description = description
+        if video_path:
+            video.video_path = video_path
+        if thumbnail_path:
+            video.thumbnail_path = thumbnail_path
+        elif request.form.get("remove_thumbnail") == "on":
+            video.thumbnail_path = None
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            _remove_video_uploads(saved_paths)
+            current_app.logger.exception("Could not update product video record %s.", video_id)
+            flash("The video details could not be saved. Please try again.", "error")
+            return render_template(
+                "admin/video_form.html",
+                video=ProductVideo.query.get_or_404(video_id),
+                form=request.form,
+            )
+
+        cleanup_ok = True
+        if video_path and not _remove_video_upload(previous_video_path):
+            cleanup_ok = False
+        if video.thumbnail_path != previous_thumbnail_path and previous_thumbnail_path:
+            if not _remove_video_upload(previous_thumbnail_path):
+                cleanup_ok = False
+        if cleanup_ok:
+            flash("Product video updated.", "success")
+        else:
+            flash("Product video updated, but an old media file could not be removed.", "error")
+        return redirect(url_for("admin.videos_index"))
+
+    return render_template("admin/video_form.html", video=video, form=None)
+
+
+@admin_bp.route("/videos/<int:video_id>/delete", methods=["POST"])
+@login_required
+def videos_delete(video_id):
+    video = ProductVideo.query.get_or_404(video_id)
+    media_paths = [video.video_path, video.thumbnail_path]
+    db.session.delete(video)
+    db.session.commit()
+    if _remove_video_uploads(media_paths):
+        flash("Product video deleted.", "success")
+    else:
+        flash("Product video deleted, but one or more media files could not be removed.", "error")
+    return redirect(url_for("admin.videos_index"))
+
+
+def _remove_video_upload(relative_path):
+    return delete_uploaded_file(relative_path)
+
+
+def _remove_video_uploads(relative_paths):
+    cleanup_ok = True
+    for relative_path in relative_paths:
+        if not _remove_video_upload(relative_path):
+            cleanup_ok = False
+    return cleanup_ok
 
 
 def _maybe_notify_subscribers_of_product(product: Product) -> None:

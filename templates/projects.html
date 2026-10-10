@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Projects | {{ company_name }}{% endblock %}
+{% block content %}
+<header class="hero page-hero" id="home">
+    <div class="container">
+        <div class="section-head">
+            <h2>Our <span>Projects</span></h2>
+            <p>Explore projects built with clean code, modern design, and attention to detail.</p>
+        </div>
+    </div>
+</header>
+
+<section>
+    <div class="container">
+        {% if projects %}
+        <div class="projects-grid">
+            {% for project in projects %}
+            <article class="project-card reveal">
+                {% if project.image and project.image.startswith('static:') %}
+                <img src="{{ url_for('static', filename=project.image[7:]) }}" alt="{{ project.title }}">
+                {% elif project.image %}
+                <img src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="{{ project.title }}">
+                {% else %}
+                <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="{{ project.title }}">
+                {% endif %}
+                <div class="project-body">
+                    <h3>{{ project.title }}</h3>
+                    <p>{{ project.short_description }}</p>
+                    <div class="project-tags">
+                        {% if project.category %}<span>{{ project.category }}</span>{% endif %}
+                        {% if project.project_url %}<a href="{{ project.project_url }}" target="_blank" rel="noopener">Live project →</a>{% endif %}
+                        {% if project.github_url %}<a href="{{ project.github_url }}" target="_blank" rel="noopener">GitHub →</a>{% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% if pagination.pages > 1 %}
+        <nav class="pagination" aria-label="Project pages">
+            {% if pagination.has_prev %}
+                <a href="{{ url_for('public.projects_list', page=pagination.prev_num) }}">&laquo; Prev</a>
+            {% else %}
+                <span class="disabled">&laquo; Prev</span>
+            {% endif %}
+            {% for page_number in pagination.iter_pages() %}
+                {% if page_number %}
+                    {% if page_number == pagination.page %}
+                        <span class="current" aria-current="page">{{ page_number }}</span>
+                    {% else %}
+                        <a href="{{ url_for('public.projects_list', page=page_number) }}">{{ page_number }}</a>
+                    {% endif %}
+                {% else %}
+                    <span aria-hidden="true">…</span>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+                <a href="{{ url_for('public.projects_list', page=pagination.next_num) }}">Next &raquo;</a>
+            {% else %}
+                <span class="disabled">Next &raquo;</span>
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">No projects are currently available. Check back soon!</div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

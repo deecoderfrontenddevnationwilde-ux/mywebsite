@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% if content_type == "news" %}
+    {% set detail_title = item.title %}
+    {% set detail_description = item.summary %}
+    {% set detail_image = item.featured_image %}
+{% else %}
+    {% set detail_title = item.name %}
+    {% set detail_description = item.short_description or item.name %}
+    {% set detail_image = item.image %}
+{% endif %}
+{% block title %}{{ detail_title }} | {{ company_name }}{% endblock %}
+{% block description %}{{ detail_description }}{% endblock %}
+{% block extra_head %}
+<meta property="og:type" content="{{ 'article' if content_type == 'news' else 'product' }}">
+<meta property="og:title" content="{{ detail_title }}">
+<meta property="og:description" content="{{ detail_description }}">
+<meta property="og:url" content="{{ request.base_url }}">
+<meta property="og:image" content="{{ url_for('public.uploaded_file', filename=detail_image, _external=True) if detail_image else url_for('static', filename='images/g6jYI.jpg', _external=True) }}">
+<link rel="canonical" href="{{ request.base_url }}">
+{% endblock %}
+
+{% block content %}
+<section class="content-detail-page content-detail-{{ content_type }}">
+    <div class="container">
+        <nav class="detail-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+                <li><a href="{{ url_for('public.home') }}">Home</a></li>
+                <li aria-hidden="true">→</li>
+                <li><a href="{{ url_for('public.news_list' if content_type == 'news' else 'public.products_list') }}">{{ 'News' if content_type == 'news' else 'Products' }}</a></li>
+                <li aria-hidden="true">→</li>
+                <li class="current" aria-current="page">{{ detail_title }}</li>
+            </ol>
+        </nav>
+
+        <header class="content-detail-heading">
+            <p class="detail-eyebrow">{{ 'Latest story' if content_type == 'news' else 'Featured product' }}</p>
+            <h1>{{ detail_title }}</h1>
+            {% if detail_description %}<p class="detail-deck">{{ detail_description }}</p>{% endif %}
+            <div class="detail-meta">
+                {% if content_type == 'news' %}
+                    {% if item.author %}<span><i class="ri-user-line" aria-hidden="true"></i> {{ item.author }}</span>{% endif %}
+                    {% if item.published_at or item.created_at %}<span><i class="ri-calendar-line" aria-hidden="true"></i> {{ (item.published_at or item.created_at).strftime('%B %d, %Y') }}</span>{% endif %}
+                    {% if reading_minutes %}<span><i class="ri-time-line" aria-hidden="true"></i> {{ reading_minutes }} min read</span>{% endif %}
+                {% else %}
+                    {% if item.category %}<span><i class="ri-price-tag-3-line" aria-hidden="true"></i> {{ item.category }}</span>{% endif %}
+                    {% if item.stock_status %}<span><i class="ri-checkbox-circle-line" aria-hidden="true"></i> {{ item.stock_status.replace('_', ' ')|title }}</span>{% endif %}
+                {% endif %}
+            </div>
+        </header>
+
+        <figure class="content-detail-figure">
+            <img
+                src="{{ url_for('public.uploaded_file', filename=detail_image) if detail_image else url_for('static', filename='images/g6jYI.jpg') }}"
+                alt="{{ detail_title }}"
+                fetchpriority="high"
+                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/g6jYI.jpg') }}';">
+        </figure>
+
+        <div class="content-detail-layout">
+            <main class="detail-main">
+                <article class="detail-content">
+                    {{ (item.content if content_type == 'news' else item.description)|safe }}
+                </article>
+
+                {% if content_type == 'news' %}
+                <div class="detail-share" aria-label="Share this article">
+                    <span>Share this story</span>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn">
+                        <i class="ri-linkedin-fill" aria-hidden="true"></i>
+                    </a>
+                    <a href="https://twitter.com/intent/tweet?url={{ request.url|urlencode }}&text={{ item.title|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on X">
+                        <i class="ri-twitter-x-fill" aria-hidden="true"></i>
+                    </a>
+                    <a href="mailto:?subject={{ item.title|urlencode }}&body={{ request.url|urlencode }}" aria-label="Share by email">
+                        <i class="ri-mail-line" aria-hidden="true"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </main>
+
+            <aside class="detail-sidebar" aria-label="{{ 'Article information' if content_type == 'news' else 'Product information' }}">
+                {% if content_type == 'news' %}
+                <section class="detail-info-card">
+                    <p class="detail-card-label">Article details</p>
+                    {% if item.author %}<div class="detail-info-row"><span>Written by</span><strong>{{ item.author }}</strong></div>{% endif %}
+                    {% if item.published_at or item.created_at %}<div class="detail-info-row"><span>Published</span><strong>{{ (item.published_at or item.created_at).strftime('%b %d, %Y') }}</strong></div>{% endif %}
+                    {% if reading_minutes %}<div class="detail-info-row"><span>Reading time</span><strong>{{ reading_minutes }} min</strong></div>{% endif %}
+                </section>
+                {% else %}
+                <section class="detail-info-card product-info-card">
+                    <p class="detail-card-label">Product information</p>
+                    {% if item.price is not none %}<p class="detail-product-price">${{ '%.2f'|format(item.price) }}</p>{% endif %}
+                    {% if item.category %}<div class="detail-info-row"><span>Category</span><strong>{{ item.category }}</strong></div>{% endif %}
+                    {% if item.stock_status %}<div class="detail-info-row"><span>Availability</span><strong>{{ item.stock_status.replace('_', ' ')|title }}</strong></div>{% endif %}
+                    <a href="{{ url_for('public.home') }}#contact" class="btn btn-primary detail-cta">Enquire about this product <i class="ri-arrow-right-line" aria-hidden="true"></i></a>
+                </section>
+                {% endif %}
+
+                <a href="{{ url_for('public.news_list' if content_type == 'news' else 'public.products_list') }}" class="detail-back-link">
+                    <i class="ri-arrow-left-line" aria-hidden="true"></i>
+                    Back to {{ 'News' if content_type == 'news' else 'Products' }}
+                </a>
+            </aside>
+        </div>
+
+        {% if content_type == 'news' and (newer_article or older_article) %}
+        <nav class="detail-article-nav" aria-label="Article navigation">
+            {% if newer_article %}
+            <a href="{{ url_for('public.news_detail', slug=newer_article.slug) }}">
+                <span><i class="ri-arrow-left-line" aria-hidden="true"></i> Newer story</span>
+                <strong>{{ newer_article.title }}</strong>
+            </a>
+            {% endif %}
+            {% if older_article %}
+            <a href="{{ url_for('public.news_detail', slug=older_article.slug) }}" class="article-nav-older">
+                <span>Older story <i class="ri-arrow-right-line" aria-hidden="true"></i></span>
+                <strong>{{ older_article.title }}</strong>
+            </a>
+            {% endif %}
+        </nav>
+        {% endif %}
+
+        {% if related %}
+        <section class="detail-related" aria-labelledby="detail-related-heading">
+            <div class="detail-related-heading">
+                <div>
+                    <p class="detail-eyebrow">{{ 'Keep reading' if content_type == 'news' else 'Explore more' }}</p>
+                    <h2 id="detail-related-heading">Related <span>{{ 'News' if content_type == 'news' else 'Products' }}</span></h2>
+                </div>
+                <a href="{{ url_for('public.news_list' if content_type == 'news' else 'public.products_list') }}" class="detail-all-link">View all <i class="ri-arrow-right-line" aria-hidden="true"></i></a>
+            </div>
+            <div class="projects-grid">
+                {% for related_item in related %}
+                <article class="project-card detail-related-card">
+                    {% if content_type == 'news' %}
+                        {% set related_title = related_item.title %}
+                        {% set related_image = related_item.featured_image %}
+                        {% set related_description = related_item.summary %}
+                        {% set related_url = url_for('public.news_detail', slug=related_item.slug) %}
+                    {% else %}
+                        {% set related_title = related_item.name %}
+                        {% set related_image = related_item.image %}
+                        {% set related_description = related_item.short_description or related_item.description %}
+                        {% set related_url = url_for('public.product_detail', slug=related_item.slug) %}
+                    {% endif %}
+                    <img
+                        src="{{ url_for('public.uploaded_file', filename=related_image) if related_image else url_for('static', filename='images/g6jYI.jpg') }}"
+                        alt="{{ related_title }}"
+                        loading="lazy"
+                        onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/g6jYI.jpg') }}';">
+                    <div class="project-body">
+                        <h3>{{ related_title }}</h3>
+                        <p>{{ related_description }}</p>
+                        <a href="{{ related_url }}" class="btn btn-ghost detail-related-link">Read More <i class="ri-arrow-right-line" aria-hidden="true"></i></a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

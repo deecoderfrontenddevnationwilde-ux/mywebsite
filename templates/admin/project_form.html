@@ -2,23 +2,57 @@
 {% block page_title %}{{ 'Edit Featured Project' if project else 'Add Featured Project' }}{% endblock %}
 {% block admin_content %}
 {% set f = form if form is not none else project %}
-<form method="POST" enctype="multipart/form-data" class="admin-panel">
+<div class="content-admin-heading">
+    <div>
+        <p class="content-admin-eyebrow"><i class="ri-layout-grid-line" aria-hidden="true"></i> PROJECT PORTFOLIO</p>
+        <h2>{{ 'Refine your project' if project else 'Add a project to your portfolio' }}</h2>
+        <p>Share the project story, links, and cover image. Active projects appear in the public portfolio.</p>
+    </div>
+    <a href="{{ url_for('admin.projects_index') }}" class="a-btn content-back-link"><i class="ri-arrow-left-line" aria-hidden="true"></i> Projects</a>
+</div>
+
+<form method="POST" action="{{ url_for('admin.projects_edit', project_id=project.id) if project else url_for('admin.projects_new') }}" enctype="multipart/form-data" class="content-editor" data-content-upload-form data-image-form data-max-image-size="{{ config.MAX_UPLOAD_MB * 1024 * 1024 }}" data-max-image-mb="{{ config.MAX_UPLOAD_MB }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="admin-form-row">
-        <div class="admin-form-group"><label for="title">Project title</label><input type="text" id="title" name="title" maxlength="200" required value="{{ f.title if f else '' }}"></div>
-        <div class="admin-form-group"><label for="category">Category</label><input type="text" id="category" name="category" maxlength="100" value="{{ f.category if f else '' }}" placeholder="E-Commerce, Security, UI/UX"></div>
-    </div>
-    <div class="admin-form-group"><label for="short_description">Short description</label><textarea id="short_description" name="short_description" maxlength="500" required style="min-height:90px;">{{ f.short_description if f else '' }}</textarea></div>
-    <div class="admin-form-group"><label for="description">Full description</label><textarea id="description" name="description">{{ f.description if f else '' }}</textarea></div>
-    <div class="admin-form-row">
-        <div class="admin-form-group"><label for="project_url">Live project URL</label><input type="url" id="project_url" name="project_url" value="{{ f.project_url if f else '' }}" placeholder="https://example.com"></div>
-        <div class="admin-form-group"><label for="github_url">GitHub/project URL</label><input type="url" id="github_url" name="github_url" value="{{ f.github_url if f else '' }}" placeholder="https://github.com/..."></div>
-    </div>
-    <div class="admin-form-row">
-        <div class="admin-form-group"><label for="display_order">Display order</label><input type="number" id="display_order" name="display_order" min="0" value="{{ f.display_order if f else 0 }}"></div>
-        <div class="admin-form-group"><label for="image">Project image</label>{% if project and project.image and project.image.startswith('static:') %}<img class="admin-current-image" src="{{ url_for('static', filename=project.image[7:]) }}" alt="">{% elif project and project.image %}<img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=project.image) }}" alt="">{% endif %}<input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp"><div class="admin-help-text">Leave blank to keep the current image.</div></div>
-    </div>
-    <label class="admin-checkbox"><input type="checkbox" name="active" {{ 'checked' if f and f.active else '' }}> Active on public website</label>
-    <div class="admin-form-actions"><button type="submit" class="a-btn a-btn-primary">Save Project</button><a href="{{ url_for('admin.projects_index') }}" class="a-btn">Cancel</a></div>
+    <section class="admin-panel content-editor-panel">
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-file-edit-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">PROJECT DETAILS</p><h3>Project information</h3></div></div>
+        <div class="admin-form-row">
+            <div class="admin-form-group"><label for="title">Project title <span class="content-required">Required</span></label><input type="text" id="title" name="title" maxlength="200" required value="{{ f.title if f else '' }}" placeholder="e.g. Ecommerce platform redesign" data-preview-source="project-title" data-preview-target="project-preview-title"></div>
+            <div class="admin-form-group"><label for="category">Category <span class="content-optional">Optional</span></label><input type="text" id="category" name="category" maxlength="100" value="{{ f.category if f else '' }}" placeholder="E-Commerce, Security, UI/UX" data-preview-source="project-category" data-preview-target="project-preview-category"></div>
+        </div>
+        <div class="admin-form-group"><label for="short_description">Short description <span class="content-required">Required</span></label><textarea id="short_description" name="short_description" maxlength="500" required class="content-summary-field" placeholder="A concise introduction for project cards." data-preview-source="project-description" data-preview-target="project-preview-description">{{ f.short_description if f else '' }}</textarea><div class="admin-help-text">Shown in project cards (up to 500 characters).</div></div>
+        <div class="admin-form-group"><label for="description">Full description <span class="content-optional">Optional</span></label><textarea id="description" name="description" class="content-long-field" placeholder="Add more detail about the project, goals, and results.">{{ f.description if f else '' }}</textarea></div>
+
+        <div class="content-upload-divider"></div>
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-links-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">PROJECT LINKS</p><h3>Where can visitors explore it?</h3></div></div>
+        <div class="admin-form-row">
+            <div class="admin-form-group"><label for="project_url">Live project URL <span class="content-optional">Optional</span></label><input type="url" id="project_url" name="project_url" value="{{ f.project_url if f else '' }}" placeholder="https://example.com"><div class="admin-help-text">Use a complete http:// or https:// URL.</div></div>
+            <div class="admin-form-group"><label for="github_url">GitHub / source URL <span class="content-optional">Optional</span></label><input type="url" id="github_url" name="github_url" value="{{ f.github_url if f else '' }}" placeholder="https://github.com/..."><div class="admin-help-text">Use a complete http:// or https:// URL.</div></div>
+        </div>
+
+        <div class="content-upload-divider"></div>
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-image-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">COVER IMAGE</p><h3>Choose a project image</h3></div></div>
+        <div class="content-image-upload">
+            <div class="content-image-dropzone" data-image-dropzone>
+                <input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" data-image-input data-preview-target="project-cover-preview" data-current-image="{{ 'true' if project and project.image else 'false' }}">
+                <span class="content-image-drop-icon"><i class="ri-upload-cloud-2-line" aria-hidden="true"></i></span>
+                <strong>Drop a cover image here</strong><span>PNG, JPG, GIF, or WEBP · Up to {{ config.MAX_UPLOAD_MB }} MB</span>
+                <button type="button" class="a-btn" data-image-browse><i class="ri-folder-upload-line" aria-hidden="true"></i> Choose image</button>
+            </div>
+            <p class="content-upload-error" data-image-error role="alert" hidden></p>
+            <div class="content-image-preview-wrap">
+                <img id="project-cover-preview" class="content-image-preview" data-image-preview {% if project and project.image and project.image.startswith('static:') %}src="{{ url_for('static', filename=project.image[7:]) }}"{% elif project and project.image %}src="{{ url_for('public.uploaded_file', filename=project.image) }}"{% else %}hidden{% endif %} alt="Project cover preview">
+                <span class="content-image-placeholder" data-image-placeholder {% if project and project.image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i><span>Image preview</span></span>
+                <span class="content-current-image-note" data-image-current-note {% if not project or not project.image %}hidden{% endif %}>Current image · Choose a new file to replace</span>
+            </div>
+        </div>
+
+        <div class="content-live-preview"><div class="content-preview-label"><i class="ri-eye-line" aria-hidden="true"></i> CARD PREVIEW</div><article class="content-preview-card"><img class="content-preview-image" data-content-preview-image {% if project and project.image and project.image.startswith('static:') %}src="{{ url_for('static', filename=project.image[7:]) }}"{% elif project and project.image %}src="{{ url_for('public.uploaded_file', filename=project.image) }}"{% else %}hidden{% endif %} alt=""><span class="content-preview-image-placeholder" data-content-preview-placeholder {% if project and project.image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i> Project cover</span><div class="content-preview-copy"><span class="content-preview-category" data-preview-target-id="project-preview-category">{{ f.category if f and f.category else 'Project category' }}</span><h3 data-preview-target-id="project-preview-title">{{ f.title if f and f.title else 'Project title' }}</h3><p data-preview-target-id="project-preview-description">{{ f.short_description if f and f.short_description else 'A short project description will appear here.' }}</p><span class="content-preview-status" data-content-preview-status>{{ 'Active preview' if f and f.active else 'Inactive preview' }}</span></div></article></div>
+        <div class="content-upload-divider"></div>
+        <div class="content-form-footer">
+            <div class="content-toggle-card"><label class="admin-checkbox"><input type="checkbox" name="active" data-content-publish-toggle {{ 'checked' if f and f.active else '' }}> <span><strong>Active on public website</strong><small>Inactive projects remain saved but are hidden from visitors.</small></span></label></div>
+            <div class="content-form-actions"><button type="submit" class="a-btn a-btn-primary"><i class="ri-save-3-line" aria-hidden="true"></i> {{ 'Save Project' if project else 'Create Project' }}</button><a href="{{ url_for('admin.projects_index') }}" class="a-btn">Cancel</a></div>
+        </div>
+        <div class="content-upload-status" data-content-upload-status data-upload-state="ready" role="status" aria-live="polite"><span class="content-upload-status-icon" data-content-upload-icon><i class="ri-information-line" aria-hidden="true"></i></span><div><strong data-content-upload-title>Ready to save</strong><p data-content-upload-message>Save your project details and cover image when ready.</p></div><progress max="100" value="0" data-content-upload-progress hidden aria-label="Project image upload progress"></progress><span data-content-upload-value hidden>0%</span></div>
+    </section>
 </form>
 {% endblock %}

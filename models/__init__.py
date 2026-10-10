@@ -5,6 +5,7 @@ from .subscriber import Subscriber
 from .contact import ContactMessage
 from .service_offer import ServiceOffer
 from .featured_project import FeaturedProject
+from .product_video import ProductVideo
 
 __all__ = [
 	"AdminUser",
@@ -14,4 +15,5 @@ __all__ = [
 	"ContactMessage",
 	"ServiceOffer",
 	"FeaturedProject",
+	"ProductVideo",
 ]

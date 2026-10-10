@@ -28,6 +28,7 @@ company_website/
 │   ├── admin.py               # AdminUser (Werkzeug password hashing)
 │   ├── news.py                 # News
 │   ├── product.py               # Product
+│   ├── product_video.py         # ProductVideo
 │   ├── subscriber.py             # Subscriber
 │   └── contact.py                # ContactMessage
 │
@@ -57,6 +58,8 @@ company_website/
 │   └── images/             # Placeholder images generated for missing assets — see note below
 │
 ├── uploads/news/ , uploads/products/    # User-uploaded images land here
+├── uploads/videos/                       # Product preview videos (MP4/WEBM)
+├── uploads/video-thumbnails/             # Optional product video thumbnails
 ├── migrations/                            # Created by `flask db init`
 └── instance/company.db                     # SQLite database (created automatically)
 ```
@@ -167,6 +170,22 @@ Same flow under **Products → Add Product**. Products do **not** email
 subscribers by default — tick **"Email subscribers when this product is
 published"** on the product form if you want that specific product to
 trigger a notification.
+
+### Product video previews
+
+Use **Product Videos** in the admin dashboard to upload, edit, or remove
+homepage video previews. Videos are stored in `uploads/videos/` and
+optional thumbnails in `uploads/video-thumbnails/`; the additive
+`20261010_product_videos` migration stores their metadata in the database.
+MP4 and WEBM files have no duration limit and are accepted up to 500 MB by
+default. New uploads use 8 MiB chunks; configure
+`MAX_VIDEO_UPLOAD_MB` for the total file limit and `VIDEO_UPLOAD_CHUNK_MB`
+for the individual request size. Hosting storage quotas and request limits
+still apply. Files are stored in their original quality. Apply the migration with
+`flask db upgrade` before using the new admin section. The homepage player
+uses custom play/pause, seek, time, volume, and fullscreen controls rather
+than browser-native controls; the timeline supports pointer, touch, and
+keyboard seeking.
 
 ## 5. How subscriber notifications work
 

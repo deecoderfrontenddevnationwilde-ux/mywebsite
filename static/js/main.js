@@ -43,6 +43,225 @@ document.addEventListener('DOMContentLoaded', () => {
         backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
     }
 
+    // Custom controls for homepage product videos
+    document.querySelectorAll('[data-video-player]').forEach(player => {
+        const video = player.querySelector('video');
+        const playButtons = player.querySelectorAll('[data-video-play]');
+        const seek = player.querySelector('[data-video-seek]');
+        const playedTrack = player.querySelector('[data-video-played]');
+        const timeDisplay = player.querySelector('[data-video-time]');
+        const muteButton = player.querySelector('[data-video-mute]');
+        const volume = player.querySelector('[data-video-volume]');
+        const fullscreenButton = player.querySelector('[data-video-fullscreen]');
+        const status = player.querySelector('[data-video-status]');
+
+        if (!video || !seek || !playedTrack || !timeDisplay) return;
+        let draggingSeek = false;
+        let seekPointerId = null;
+        let dragTime = 0;
+        let playbackFrame = 0;
+
+        const formatTime = seconds => {
+            if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+            const wholeSeconds = Math.floor(seconds);
+            const minutes = Math.floor(wholeSeconds / 60);
+            const remainder = String(wholeSeconds % 60).padStart(2, '0');
+            if (minutes < 60) return `${minutes}:${remainder}`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}:${String(minutes % 60).padStart(2, '0')}:${remainder}`;
+        };
+
+        const updateVolume = () => {
+            if (!volume) return;
+            const level = video.muted ? 0 : video.volume;
+            volume.value = String(level);
+            volume.style.setProperty('--video-volume', `${level * 100}%`);
+        };
+
+        const updateSeek = () => {
+            const duration = video.duration;
+            const hasDuration = Number.isFinite(duration) && duration > 0;
+            const currentTime = draggingSeek ? dragTime : video.currentTime;
+            const progress = hasDuration ? Math.min(Math.max(currentTime / duration, 0), 1) : 0;
+            seek.setAttribute('aria-disabled', String(!hasDuration));
+            seek.setAttribute('aria-valuemin', '0');
+            seek.setAttribute('aria-valuemax', hasDuration ? String(duration) : '0');
+            seek.setAttribute('aria-valuenow', hasDuration ? String(currentTime) : '0');
+            seek.style.setProperty('--video-progress', `${progress * 100}%`);
+            playedTrack.style.width = `${progress * 100}%`;
+            seek.setAttribute('aria-valuetext', `${formatTime(currentTime)} of ${formatTime(duration)}`);
+            timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+        };
+
+        const seekToPointer = event => {
+            const duration = video.duration;
+            if (!Number.isFinite(duration) || duration <= 0) return;
+            const bounds = seek.getBoundingClientRect();
+            if (bounds.width <= 0) return;
+            const position = Math.min(Math.max((event.clientX - bounds.left) / bounds.width, 0), 1);
+            dragTime = position * duration;
+            video.currentTime = dragTime;
+            updateSeek();
+        };
+
+        seek.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || seek.getAttribute('aria-disabled') === 'true') return;
+            event.preventDefault();
+            draggingSeek = true;
+            seekPointerId = event.pointerId;
+            seek.setPointerCapture(event.pointerId);
+            seek.classList.add('is-seeking');
+            seekToPointer(event);
+        });
+        seek.addEventListener('pointermove', event => {
+            if (draggingSeek && event.pointerId === seekPointerId) seekToPointer(event);
+        });
+        const endSeeking = event => {
+            if (!draggingSeek || event.pointerId !== seekPointerId) return;
+            draggingSeek = false;
+            seekPointerId = null;
+            seek.classList.remove('is-seeking');
+            updateSeek();
+        };
+        seek.addEventListener('pointerup', endSeeking);
+        seek.addEventListener('pointercancel', endSeeking);
+        seek.addEventListener('lostpointercapture', endSeeking);
+        seek.addEventListener('keydown', event => {
+            const duration = video.duration;
+            if (!Number.isFinite(duration) || duration <= 0) return;
+            let targetTime;
+            const step = event.shiftKey ? 10 : 5;
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') targetTime = video.currentTime - step;
+            else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') targetTime = video.currentTime + step;
+            else if (event.key === 'Home') targetTime = 0;
+            else if (event.key === 'End') targetTime = duration;
+            else return;
+            event.preventDefault();
+            video.currentTime = Math.min(Math.max(targetTime, 0), duration);
+            updateSeek();
+        });
+
+        const updatePlayState = () => {
+            const isPlaying = !video.paused && !video.ended;
+            player.classList.toggle('is-playing', isPlaying);
+            playButtons.forEach(button => {
+                const title = video.getAttribute('aria-label') || 'video';
+                button.setAttribute('aria-label', `${isPlaying ? 'Pause' : 'Play'} ${title}`);
+                button.setAttribute('aria-pressed', String(isPlaying));
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('ri-play-fill', !isPlaying);
+                    icon.classList.toggle('ri-pause-fill', isPlaying);
+                }
+            });
+        };
+
+        const play = () => {
+            if (status) status.textContent = '';
+            const playback = video.play();
+            if (playback && typeof playback.catch === 'function') {
+                playback.catch(() => {
+                    if (status) status.textContent = 'Playback could not be started. Please try again.';
+                    updatePlayState();
+                });
+            }
+        };
+
+        playButtons.forEach(button => button.addEventListener('click', () => {
+            if (video.paused || video.ended) play();
+            else video.pause();
+        }));
+        video.addEventListener('click', () => {
+            if (video.paused || video.ended) play();
+            else video.pause();
+        });
+        video.addEventListener('keydown', event => {
+            if (event.code === 'Space' || event.code === 'KeyK') {
+                event.preventDefault();
+                if (video.paused || video.ended) play();
+                else video.pause();
+            }
+        });
+
+        if (muteButton) {
+            muteButton.addEventListener('click', () => {
+                video.muted = !video.muted;
+            });
+            video.addEventListener('volumechange', () => {
+                const isMuted = video.muted || video.volume === 0;
+                muteButton.setAttribute('aria-label', `${isMuted ? 'Unmute' : 'Mute'} ${video.getAttribute('aria-label') || 'video'}`);
+                muteButton.setAttribute('aria-pressed', String(isMuted));
+                const icon = muteButton.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('ri-volume-mute-line', isMuted);
+                    icon.classList.toggle('ri-volume-up-line', !isMuted);
+                }
+                updateVolume();
+            });
+        }
+
+        if (volume) {
+            volume.addEventListener('input', () => {
+                video.volume = Number(volume.value);
+                video.muted = video.volume === 0;
+                updateVolume();
+            });
+            updateVolume();
+        }
+
+        if (fullscreenButton) {
+            fullscreenButton.addEventListener('click', async () => {
+                try {
+                    if (document.fullscreenElement) await document.exitFullscreen();
+                    else if (player.requestFullscreen) await player.requestFullscreen();
+                    else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+                    else if (status) status.textContent = 'Fullscreen is not supported by this browser.';
+                } catch {
+                    if (status) status.textContent = 'Fullscreen could not be opened.';
+                }
+            });
+            document.addEventListener('fullscreenchange', () => {
+                const isFullscreen = document.fullscreenElement === player;
+                fullscreenButton.setAttribute('aria-label', `${isFullscreen ? 'Exit' : 'Enter'} fullscreen for ${video.getAttribute('aria-label') || 'video'}`);
+                const icon = fullscreenButton.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('ri-fullscreen-exit-line', isFullscreen);
+                    icon.classList.toggle('ri-fullscreen-line', !isFullscreen);
+                }
+            });
+        }
+
+        ['loadedmetadata', 'durationchange', 'timeupdate', 'seeking', 'seeked'].forEach(eventName => {
+            video.addEventListener(eventName, updateSeek);
+        });
+        const updateWhilePlaying = () => {
+            updateSeek();
+            if (!video.paused && !video.ended) playbackFrame = requestAnimationFrame(updateWhilePlaying);
+            else playbackFrame = 0;
+        };
+        video.addEventListener('play', () => {
+            updatePlayState();
+            if (!playbackFrame) playbackFrame = requestAnimationFrame(updateWhilePlaying);
+        });
+        video.addEventListener('pause', () => {
+            updatePlayState();
+            if (playbackFrame) cancelAnimationFrame(playbackFrame);
+            playbackFrame = 0;
+            updateSeek();
+        });
+        video.addEventListener('ended', () => {
+            updatePlayState();
+            if (playbackFrame) cancelAnimationFrame(playbackFrame);
+            playbackFrame = 0;
+            updateSeek();
+        });
+        video.addEventListener('error', () => {
+            if (status) status.textContent = 'This video could not be loaded.';
+        });
+        updateSeek();
+        updatePlayState();
+    });
+
     // Reveal on scroll
     const revealObs = new IntersectionObserver((entries) => {
         entries.forEach(e => {

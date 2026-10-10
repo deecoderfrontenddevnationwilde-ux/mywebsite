@@ -48,14 +48,27 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USE_SSL=0
 MAX_UPLOAD_MB=5
+MAX_VIDEO_UPLOAD_MB=500
+VIDEO_UPLOAD_CHUNK_MB=8
 ```
 
 Replace `YOUR_USERNAME` with the PythonAnywhere username. A Gmail App Password is required; do not use the normal Gmail password.
 
+Product videos have no duration limit in the application. The default maximum
+file size is 500 MB, and new videos upload in 8 MiB chunks so an individual
+request stays small and can be retried from the admin form. Set
+`MAX_VIDEO_UPLOAD_MB` to a lower value if needed to match available account
+storage, or raise it only when the PythonAnywhere account has enough free
+storage. `VIDEO_UPLOAD_CHUNK_MB` can be lowered if the hosting tier or any
+upstream proxy has a smaller per-request body limit. Hosting disk quotas and
+provider request limits are independent of Flask settings and cannot be raised
+by application code; check the account's current plan/usage before selecting
+a higher total upload size. Uploads preserve the original file bytes.
+
 Create the directories used for the database and uploads:
 
 ```bash
-mkdir -p instance uploads/news uploads/products uploads/projects
+mkdir -p instance uploads/news uploads/products uploads/projects uploads/videos uploads/video-thumbnails
 ```
 
 ## 4. Database migrations
@@ -177,7 +190,11 @@ pip install -r requirements.txt
 flask --app app db upgrade
 ```
 
-Then click **Reload** in the Web tab.
+If this site already has a production `.env`, update its existing
+`MAX_VIDEO_UPLOAD_MB` value to `500` (or another value supported by the
+account's remaining storage) and set `VIDEO_UPLOAD_CHUNK_MB=8`. Environment
+variables configured separately in the hosting dashboard take precedence over
+`.env`, so update those there if present. Then click **Reload** in the Web tab.
 
 ## 9. Troubleshooting a generic PythonAnywhere error
 

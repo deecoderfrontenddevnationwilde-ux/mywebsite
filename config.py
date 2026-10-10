@@ -45,7 +45,10 @@ class Config:
     # --- Uploads ---
     UPLOAD_FOLDER = str(BASE_DIR / "uploads")
     ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_UPLOAD_MB", "5")) * 1024 * 1024
+    MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "5"))
+    MAX_VIDEO_UPLOAD_MB = int(os.environ.get("MAX_VIDEO_UPLOAD_MB", "500"))
+    VIDEO_UPLOAD_CHUNK_MB = int(os.environ.get("VIDEO_UPLOAD_CHUNK_MB", "8"))
+    MAX_CONTENT_LENGTH = (max(MAX_UPLOAD_MB, MAX_VIDEO_UPLOAD_MB) + 1) * 1024 * 1024
 
     # --- Sessions / cookies ---
     SESSION_COOKIE_HTTPONLY = True

@@ -2,63 +2,36 @@
 {% block page_title %}{{ 'Edit Product' if product else 'Add Product' }}{% endblock %}
 {% block admin_content %}
 {% set f = form if form is not none else product %}
-<form method="POST" enctype="multipart/form-data" class="admin-panel">
+{% set price_value = f.get('price') if f is mapping else (f.price if f else none) %}
+<div class="content-admin-heading">
+    <div><p class="content-admin-eyebrow"><i class="ri-shopping-bag-3-line" aria-hidden="true"></i> PRODUCT CATALOG</p><h2>{{ 'Update product details' if product else 'Add a product to your catalog' }}</h2><p>Manage pricing, descriptions, featured placement, availability, and publication.</p></div>
+    <a href="{{ url_for('admin.products_index') }}" class="a-btn content-back-link"><i class="ri-arrow-left-line" aria-hidden="true"></i> Products</a>
+</div>
+<form method="POST" action="{{ url_for('admin.products_edit', product_id=product.id) if product else url_for('admin.products_new') }}" enctype="multipart/form-data" class="content-editor" data-content-upload-form data-image-form data-max-image-size="{{ config.MAX_UPLOAD_MB * 1024 * 1024 }}" data-max-image-mb="{{ config.MAX_UPLOAD_MB }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-    <div class="admin-form-row">
-        <div class="admin-form-group">
-            <label for="name">Product Name</label>
-            <input type="text" id="name" name="name" required value="{{ f.name if f else '' }}">
+    <section class="admin-panel content-editor-panel">
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-file-edit-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">PRODUCT DETAILS</p><h3>Product information</h3></div></div>
+        <div class="admin-form-row">
+            <div class="admin-form-group"><label for="name">Product name <span class="content-required">Required</span></label><input type="text" id="name" name="name" maxlength="200" required value="{{ f.name if f else '' }}" placeholder="e.g. Premium website template" data-preview-source="product-name" data-preview-target="product-preview-title"></div>
+            <div class="admin-form-group"><label for="category">Category <span class="content-optional">Optional</span></label><input type="text" id="category" name="category" maxlength="100" value="{{ f.category if f else '' }}" placeholder="Web App, Template, Service" data-preview-source="product-category" data-preview-target="product-preview-category"></div>
         </div>
-        <div class="admin-form-group">
-            <label for="category">Category</label>
-            <input type="text" id="category" name="category" value="{{ f.category if f else '' }}" placeholder="e.g. Web App, Template, Service">
+        <div class="admin-form-group"><label for="short_description">Short description <span class="content-optional">Optional</span></label><textarea id="short_description" name="short_description" maxlength="300" class="content-summary-field" placeholder="A short summary shown on product cards." data-preview-source="product-description" data-preview-target="product-preview-description">{{ f.short_description if f else '' }}</textarea><div class="admin-help-text">Shown on the homepage and product listing cards (up to 300 characters).</div></div>
+        <div class="admin-form-group"><label for="description">Full description <span class="content-required">Required</span></label><textarea id="description" name="description" required class="content-long-field" placeholder="Describe the product and what customers receive.">{{ f.description if f else '' }}</textarea></div>
+        <div class="admin-form-row">
+            <div class="admin-form-group"><label for="price">Price (USD) <span class="content-optional">Optional</span></label><div class="content-price-input"><span aria-hidden="true">$</span><input type="number" step="0.01" min="0" id="price" name="price" value="{{ price_value if price_value is not none else '' }}" placeholder="0.00" data-preview-source="product-price" data-preview-target="product-preview-price"></div><div class="admin-help-text">Leave blank if this product has no displayed price.</div></div>
+            <div class="admin-form-group"><label>Product image <span class="content-optional">Optional</span></label><div class="content-image-upload content-image-upload-compact"><div class="content-image-dropzone" data-image-dropzone><input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" data-image-input data-preview-target="product-cover-preview" data-current-image="{{ 'true' if product and product.image else 'false' }}"><span class="content-image-drop-icon"><i class="ri-upload-cloud-2-line" aria-hidden="true"></i></span><strong>Drop an image or browse</strong><span>PNG, JPG, GIF, WEBP · {{ config.MAX_UPLOAD_MB }} MB max</span><button type="button" class="a-btn" data-image-browse><i class="ri-folder-upload-line" aria-hidden="true"></i> Choose image</button></div><p class="content-upload-error" data-image-error role="alert" hidden></p><div class="content-image-preview-wrap"><img id="product-cover-preview" class="content-image-preview" data-image-preview {% if product and product.image %}src="{{ url_for('public.uploaded_file', filename=product.image) }}"{% else %}hidden{% endif %} alt="Product image preview"><span class="content-image-placeholder" data-image-placeholder {% if product and product.image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i><span>Image preview</span></span><span class="content-current-image-note" data-image-current-note {% if not product or not product.image %}hidden{% endif %}>Current image · Choose a new file to replace</span></div></div></div>
         </div>
-    </div>
-
-    <div class="admin-form-group">
-        <label for="short_description">Short Description</label>
-        <textarea id="short_description" name="short_description" style="min-height:70px;">{{ f.short_description if f else '' }}</textarea>
-        <div class="admin-help-text">Shown on the homepage and product listing cards.</div>
-    </div>
-
-    <div class="admin-form-group">
-        <label for="description">Full Description</label>
-        <textarea id="description" name="description" required style="min-height:240px;">{{ f.description if f else '' }}</textarea>
-    </div>
-
-    <div class="admin-form-row">
-        <div class="admin-form-group">
-            <label for="price">Price (USD, optional)</label>
-            <input type="number" step="0.01" id="price" name="price" value="{{ f.price if f and f.price is not none else '' }}">
+        <div class="content-live-preview"><div class="content-preview-label"><i class="ri-eye-line" aria-hidden="true"></i> CARD PREVIEW</div><article class="content-preview-card"><img class="content-preview-image" data-content-preview-image {% if product and product.image %}src="{{ url_for('public.uploaded_file', filename=product.image) }}"{% else %}hidden{% endif %} alt=""><span class="content-preview-image-placeholder" data-content-preview-placeholder {% if product and product.image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i> Product image</span><div class="content-preview-copy"><span class="content-preview-category" data-preview-target-id="product-preview-category">{{ f.category if f and f.category else 'Product category' }}</span><div class="content-preview-title-row"><h3 data-preview-target-id="product-preview-title">{{ f.name if f and f.name else 'Product name' }}</h3><strong data-preview-target-id="product-preview-price">{{ '$%.2f'|format(price_value|float) if price_value else '' }}</strong></div><p data-preview-target-id="product-preview-description">{{ f.short_description if f and f.short_description else 'A short product description will appear here.' }}</p><span class="content-preview-status" data-content-preview-status>{{ 'Published preview' if f and f.published else 'Draft preview' }}</span></div></article></div>
+        <div class="content-upload-divider"></div>
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-settings-3-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">VISIBILITY & NOTIFICATIONS</p><h3>Control how this product appears</h3></div></div>
+        <div class="admin-form-group content-stock-field"><label for="stock_status">Availability</label><select id="stock_status" name="stock_status"><option value="in_stock" {{ 'selected' if f and f.stock_status == 'in_stock' else '' }}>In stock</option><option value="out_of_stock" {{ 'selected' if f and f.stock_status == 'out_of_stock' else '' }}>Out of stock</option></select><div class="admin-help-text">Availability is shown on the product detail page and API.</div></div>
+        <div class="content-toggle-grid">
+            <label class="content-toggle-card admin-checkbox"><input type="checkbox" name="featured" {{ 'checked' if f and f.featured else '' }}><span><strong>Featured product</strong><small>Eligible for homepage Featured Products.</small></span></label>
+            <label class="content-toggle-card admin-checkbox"><input type="checkbox" name="published" data-content-publish-toggle {{ 'checked' if f and f.published else '' }}><span><strong>Published</strong><small>Visible on the live product pages.</small></span></label>
+            <label class="content-toggle-card admin-checkbox"><input type="checkbox" name="notify_on_publish" {{ 'checked' if f and f.notify_on_publish else '' }}><span><strong>Notify subscribers</strong><small>Send an email when first published.</small></span></label>
         </div>
-        <div class="admin-form-group">
-            <label for="image">Product Image</label>
-            {% if product and product.image %}
-            <img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=product.image) }}" alt="">
-            {% endif %}
-            <input type="file" id="image" name="image" accept=".png,.jpg,.jpeg,.gif,.webp">
-            <div class="admin-help-text">Leave blank to keep the current image.</div>
-        </div>
-    </div>
-
-    <label class="admin-checkbox" style="margin-bottom:0.6rem;">
-        <input type="checkbox" name="featured" {{ 'checked' if product and product.featured else '' }}>
-        Featured (shown in the homepage "Featured Products" section)
-    </label><br>
-    <label class="admin-checkbox" style="margin-bottom:0.6rem;">
-        <input type="checkbox" name="published" {{ 'checked' if product and product.published else '' }}>
-        Published (visible on the live website)
-    </label><br>
-    <label class="admin-checkbox">
-        <input type="checkbox" name="notify_on_publish" {{ 'checked' if product and product.notify_on_publish else '' }}>
-        Email subscribers when this product is published
-    </label>
-    <div class="admin-help-text">Off by default — products don't need to notify subscribers unless you turn this on.</div>
-
-    <div class="admin-form-actions">
-        <button type="submit" class="a-btn a-btn-primary">Save</button>
-        <a href="{{ url_for('admin.products_index') }}" class="a-btn">Cancel</a>
-    </div>
+        <div class="content-form-footer"><div class="content-publication-note"><span class="content-live-dot"></span><div><strong>{{ 'Currently published' if f and f.published else 'Saved as a draft' }}</strong><span>You can change publication status at any time.</span></div></div><div class="content-form-actions"><button type="submit" class="a-btn a-btn-primary"><i class="ri-save-3-line" aria-hidden="true"></i> {{ 'Save Product' if product else 'Create Product' }}</button><a href="{{ url_for('admin.products_index') }}" class="a-btn">Cancel</a></div></div>
+        <div class="content-upload-status" data-content-upload-status data-upload-state="ready" role="status" aria-live="polite"><span class="content-upload-status-icon" data-content-upload-icon><i class="ri-information-line" aria-hidden="true"></i></span><div><strong data-content-upload-title>Ready to save</strong><p data-content-upload-message>Save your product details and image when ready.</p></div><progress max="100" value="0" data-content-upload-progress hidden aria-label="Product image upload progress"></progress><span data-content-upload-value hidden>0%</span></div>
+    </section>
 </form>
 {% endblock %}

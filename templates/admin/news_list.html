@@ -1,38 +1,15 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}News{% endblock %}
 {% block admin_content %}
-<div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-    <a href="{{ url_for('admin.news_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line"></i> Add News</a>
-</div>
-<div class="admin-panel">
-    <table class="admin-table">
-        <thead><tr><th></th><th>Title</th><th>Status</th><th>Author</th><th>Updated</th><th>Actions</th></tr></thead>
-        <tbody>
-        {% for a in articles %}
-            <tr>
-                <td>
-                    {% if a.featured_image %}
-                    <img class="thumb" src="{{ url_for('public.uploaded_file', filename=a.featured_image) }}" alt="">
-                    {% else %}
-                    <div class="thumb" style="background:rgba(255,255,255,0.05);"></div>
-                    {% endif %}
-                </td>
-                <td>{{ a.title }}</td>
-                <td><span class="badge {{ 'badge-published' if a.published else 'badge-draft' }}">{{ 'Published' if a.published else 'Draft' }}</span></td>
-                <td>{{ a.author or '—' }}</td>
-                <td>{{ a.updated_at.strftime('%b %d, %Y') }}</td>
-                <td style="white-space:nowrap;">
-                    <a href="{{ url_for('admin.news_edit', article_id=a.id) }}" class="a-btn a-btn-sm">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.news_delete', article_id=a.id) }}" style="display:inline;" onsubmit="return confirmDelete('this news article');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="a-btn a-btn-sm a-btn-danger">Delete</button>
-                    </form>
-                </td>
-            </tr>
-        {% else %}
-            <tr class="empty-row"><td colspan="6">No news articles yet. Click "Add News" to create your first one.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<div class="content-admin-heading content-library-heading"><div><p class="content-admin-eyebrow"><i class="ri-newspaper-line" aria-hidden="true"></i> NEWSROOM</p><h2>Manage your articles</h2><p>Review drafts and published stories, update content, or preview live articles.</p></div><a href="{{ url_for('admin.news_new') }}" class="a-btn a-btn-primary content-add-button"><i class="ri-add-line" aria-hidden="true"></i> Write Article</a></div>
+<div class="content-library-summary"><div class="content-library-stat"><span class="content-stat-icon"><i class="ri-article-line" aria-hidden="true"></i></span><div><strong>{{ articles|length }}</strong><span>{{ 'article' if articles|length == 1 else 'articles' }} in newsroom</span></div></div><label class="content-search"><i class="ri-search-line" aria-hidden="true"></i><input type="search" placeholder="Search articles..." aria-label="Search articles" data-content-search autocomplete="off"></label></div>
+<div class="content-library-grid" data-content-library>
+    {% for article in articles %}
+    <article class="content-library-card" data-content-card data-content-search-text="{{ (article.title ~ ' ' ~ article.summary ~ ' ' ~ (article.author or ''))|lower }}">
+        <div class="content-card-cover">{% if article.featured_image %}<img src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}" alt="{{ article.title }} cover">{% else %}<span class="content-card-cover-empty"><i class="ri-image-line" aria-hidden="true"></i> No cover image</span>{% endif %}<span class="content-card-status {{ 'is-active' if article.published else 'is-inactive' }}"><i class="{{ 'ri-checkbox-circle-line' if article.published else 'ri-draft-line' }}" aria-hidden="true"></i> {{ 'Published' if article.published else 'Draft' }}</span></div>
+        <div class="content-card-body"><div class="content-card-title-row"><h3>{{ article.title }}</h3></div><p class="content-card-description">{{ article.summary }}</p><div class="content-card-meta"><span><i class="ri-user-line" aria-hidden="true"></i> {{ article.author or 'Author not set' }}</span><span>{{ article.published_at.strftime('%b %d, %Y') if article.published and article.published_at else (article.updated_at.strftime('%b %d, %Y') if article.updated_at else 'Date unavailable') }}</span></div><div class="content-card-actions">{% if article.published %}<a href="{{ url_for('public.news_detail', slug=article.slug) }}" target="_blank" rel="noopener noreferrer" class="a-btn"><i class="ri-eye-line" aria-hidden="true"></i> Preview</a>{% endif %}<a href="{{ url_for('admin.news_edit', article_id=article.id) }}" class="a-btn"><i class="ri-edit-line" aria-hidden="true"></i> Edit</a><form method="POST" action="{{ url_for('admin.news_delete', article_id=article.id) }}" onsubmit="return confirmDelete('this news article');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="a-btn a-btn-danger"><i class="ri-delete-bin-line" aria-hidden="true"></i> Delete</button></form></div></div>
+    </article>
+    {% else %}<div class="content-library-empty"><span><i class="ri-newspaper-line" aria-hidden="true"></i></span><h3>Your newsroom is ready</h3><p>Create a news article to share updates with your visitors.</p><a href="{{ url_for('admin.news_new') }}" class="a-btn a-btn-primary"><i class="ri-add-line" aria-hidden="true"></i> Write Article</a></div>{% endfor %}
+    <p class="content-search-empty" data-content-search-empty hidden>No articles match your search.</p>
 </div>
 {% endblock %}

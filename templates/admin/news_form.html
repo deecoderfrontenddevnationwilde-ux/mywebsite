@@ -2,56 +2,26 @@
 {% block page_title %}{{ 'Edit News' if article else 'Add News' }}{% endblock %}
 {% block admin_content %}
 {% set f = form if form is not none else article %}
-<form method="POST" enctype="multipart/form-data" class="admin-panel">
+<div class="content-admin-heading"><div><p class="content-admin-eyebrow"><i class="ri-newspaper-line" aria-hidden="true"></i> NEWSROOM</p><h2>{{ 'Edit your article' if article else 'Write a new article' }}</h2><p>Prepare a clear story, preview the cover image, and choose whether to publish it now.</p></div><a href="{{ url_for('admin.news_index') }}" class="a-btn content-back-link"><i class="ri-arrow-left-line" aria-hidden="true"></i> News</a></div>
+<form method="POST" action="{{ url_for('admin.news_edit', article_id=article.id) if article else url_for('admin.news_new') }}" enctype="multipart/form-data" class="content-editor" data-content-upload-form data-image-form data-max-image-size="{{ config.MAX_UPLOAD_MB * 1024 * 1024 }}" data-max-image-mb="{{ config.MAX_UPLOAD_MB }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-    <div class="admin-form-group">
-        <label for="title">Title</label>
-        <input type="text" id="title" name="title" required value="{{ f.title if f else '' }}">
-    </div>
-
-    <div class="admin-form-group">
-        <label for="summary">Summary</label>
-        <textarea id="summary" name="summary" required style="min-height:80px;">{{ f.summary if f else '' }}</textarea>
-        <div class="admin-help-text">Shown on the homepage, /news, and in the email notification. Keep it short (1-2 sentences).</div>
-    </div>
-
-    <div class="admin-form-group">
-        <label for="content">Full Article Content</label>
-        <textarea id="content" name="content" required style="min-height:280px;">{{ f.content if f else '' }}</textarea>
-        <div class="admin-help-text">Basic HTML (paragraphs, bold, links) is supported and will be rendered as-is on the article page.</div>
-    </div>
-
-    <div class="admin-form-row">
-        <div class="admin-form-group">
-            <label for="author">Author</label>
-            <input type="text" id="author" name="author" value="{{ f.author if f else '' }}" placeholder="{{ admin_user.username if admin_user else '' }}">
+    <section class="admin-panel content-editor-panel">
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-quill-pen-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">ARTICLE CONTENT</p><h3>Tell the story</h3></div></div>
+        <div class="admin-form-group"><label for="title">Headline <span class="content-required">Required</span></label><input type="text" id="title" name="title" maxlength="200" required value="{{ f.title if f else '' }}" placeholder="Write a clear, engaging headline" data-preview-source="news-title" data-preview-target="news-preview-title"></div>
+        <div class="admin-form-group"><label for="summary">Summary <span class="content-required">Required</span></label><textarea id="summary" name="summary" maxlength="500" required class="content-summary-field" placeholder="Summarize the article in one or two sentences." data-preview-source="news-summary" data-preview-target="news-preview-summary">{{ f.summary if f else '' }}</textarea><div class="admin-help-text">Shown in homepage and news previews, and in subscriber email (up to 500 characters).</div></div>
+        <div class="admin-form-group"><label for="content">Full article content <span class="content-required">Required</span></label><textarea id="content" name="content" required class="content-long-field content-article-field" placeholder="Write the complete article here. Paragraphs and basic HTML markup are supported.">{{ f.content if f else '' }}</textarea><div class="admin-help-text">Basic HTML (paragraphs, bold, and links) is supported and rendered on the article page.</div></div>
+        <div class="content-upload-divider"></div>
+        <div class="content-panel-heading"><span class="content-panel-icon"><i class="ri-image-line" aria-hidden="true"></i></span><div><p class="content-admin-eyebrow">ARTICLE COVER</p><h3>Choose the featured image</h3></div></div>
+        <div class="content-image-upload">
+            <div class="content-image-dropzone" data-image-dropzone><input type="file" id="featured_image" name="featured_image" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" data-image-input data-preview-target="news-cover-preview" data-current-image="{{ 'true' if article and article.featured_image else 'false' }}"><span class="content-image-drop-icon"><i class="ri-upload-cloud-2-line" aria-hidden="true"></i></span><strong>Drop a cover image here</strong><span>PNG, JPG, GIF, or WEBP · Up to {{ config.MAX_UPLOAD_MB }} MB</span><button type="button" class="a-btn" data-image-browse><i class="ri-folder-upload-line" aria-hidden="true"></i> Choose image</button></div>
+            <p class="content-upload-error" data-image-error role="alert" hidden></p>
+            <div class="content-image-preview-wrap"><img id="news-cover-preview" class="content-image-preview" data-image-preview {% if article and article.featured_image %}src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}"{% else %}hidden{% endif %} alt="Article cover preview"><span class="content-image-placeholder" data-image-placeholder {% if article and article.featured_image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i><span>Cover preview</span></span><span class="content-current-image-note" data-image-current-note {% if not article or not article.featured_image %}hidden{% endif %}>Current image · Choose a new file to replace</span></div>
         </div>
-        <div class="admin-form-group">
-            <label for="featured_image">Featured Image</label>
-            {% if article and article.featured_image %}
-            <img class="admin-current-image" src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}" alt="">
-            {% endif %}
-            <input type="file" id="featured_image" name="featured_image" accept=".png,.jpg,.jpeg,.gif,.webp">
-            <div class="admin-help-text">PNG, JPG, GIF, or WEBP. Leave blank to keep the current image.</div>
-        </div>
-    </div>
-
-    <label class="admin-checkbox" style="margin-top:0.5rem;">
-        <input type="checkbox" name="published" {{ 'checked' if article and article.published else '' }}>
-        Published (visible on the live website)
-    </label>
-    {% if article %}
-    <div class="admin-help-text">
-        {% if article.published %}This article is live. Unpublishing and re-publishing later will trigger a new subscriber email.{% else %}Checking "Published" for the first time will email all active subscribers automatically.{% endif %}
-    </div>
-    {% else %}
-    <div class="admin-help-text">Checking "Published" will immediately email all active subscribers about this article.</div>
-    {% endif %}
-
-    <div class="admin-form-actions">
-        <button type="submit" class="a-btn a-btn-primary">Save</button>
-        <a href="{{ url_for('admin.news_index') }}" class="a-btn">Cancel</a>
-    </div>
+        <div class="content-upload-divider"></div>
+        <div class="admin-form-row">        <div class="content-live-preview"><div class="content-preview-label"><i class="ri-eye-line" aria-hidden="true"></i> ARTICLE PREVIEW</div><article class="content-preview-card"><img class="content-preview-image" data-content-preview-image {% if article and article.featured_image %}src="{{ url_for('public.uploaded_file', filename=article.featured_image) }}"{% else %}hidden{% endif %} alt=""><span class="content-preview-image-placeholder" data-content-preview-placeholder {% if article and article.featured_image %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i> Article cover</span><div class="content-preview-copy"><span class="content-preview-category">NEWS ARTICLE</span><h3 data-preview-target-id="news-preview-title">{{ f.title if f and f.title else 'Article headline' }}</h3><p data-preview-target-id="news-preview-summary">{{ f.summary if f and f.summary else 'Your article summary will appear here.' }}</p><span class="content-preview-status" data-content-preview-status>{{ 'Published preview' if f and f.published else 'Draft preview' }}</span></div></article></div>
+        <div class="admin-form-row"><div class="admin-form-group"><label for="author">Author <span class="content-optional">Optional</span></label><input type="text" id="author" name="author" maxlength="120" value="{{ f.author if f else '' }}" placeholder="{{ admin_user.username if admin_user else '' }}"></div><div class="content-publish-help"><i class="ri-mail-send-line" aria-hidden="true"></i><p>{% if article and article.published %}This article is live. Unpublishing and republishing later may send a new subscriber email.{% else %}Publishing an article triggers an email to active subscribers.{% endif %}</p></div></div>
+        <div class="content-form-footer"><div class="content-toggle-card"><label class="admin-checkbox"><input type="checkbox" name="published" data-content-publish-toggle {{ 'checked' if f and f.published else '' }}><span><strong>Publish article</strong><small>Published articles appear on your website and notify active subscribers.</small></span></label></div><div class="content-form-actions"><button type="submit" class="a-btn a-btn-primary"><i class="ri-send-plane-line" aria-hidden="true"></i> {{ 'Save Article' if article else 'Create Article' }}</button><a href="{{ url_for('admin.news_index') }}" class="a-btn">Cancel</a></div></div>
+        <div class="content-upload-status" data-content-upload-status data-upload-state="ready" role="status" aria-live="polite"><span class="content-upload-status-icon" data-content-upload-icon><i class="ri-information-line" aria-hidden="true"></i></span><div><strong data-content-upload-title>Ready to save</strong><p data-content-upload-message>Save your article details and cover image when ready.</p></div><progress max="100" value="0" data-content-upload-progress hidden aria-label="Article cover upload progress"></progress><span data-content-upload-value hidden>0%</span></div>
+    </section>
 </form>
 {% endblock %}

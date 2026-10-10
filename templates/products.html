@@ -33,10 +33,10 @@
                 {% endif %}
                 <div class="project-body">
                     <h3>{{ product.name }}</h3>
-                    <p>{{ product.short_description or (product.description[:120] ~ '...') }}</p>
+                    <p>{{ product.short_description or product.description }}</p>
                     {% if product.price %}<div class="card-price">${{ '%.2f'|format(product.price) }}</div>{% endif %}
                     <div class="project-tags">
-                        <a href="{{ url_for('public.product_detail', slug=product.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">View Product →</a>
+                        <a href="{{ url_for('public.product_detail', slug=product.slug) }}" class="btn btn-ghost" style="margin-top:0.75rem;display:inline-block;">Read More →</a>
                     </div>
                 </div>
             </article>

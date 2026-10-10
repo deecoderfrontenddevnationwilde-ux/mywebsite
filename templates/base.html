@@ -8,7 +8,7 @@
     <meta name="keywords" content="web development, cybersecurity, UI/UX design, front-end, React, code review">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/site-extra.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site-extra.css', v='20261010-responsive-content-titles') }}">
     <link rel="icon" href="{{ url_for('static', filename='images/g6jYI.jpg') }}">
     {% block extra_head %}{% endblock %}
 </head>
@@ -39,6 +39,7 @@
             <li><a href="{{ url_for('public.home') }}#about">About</a></li>
             <li><a href="{{ url_for('public.news_list') }}">News</a></li>
             <li><a href="{{ url_for('public.products_list') }}">Products</a></li>
+            <li><a href="{{ url_for('public.video_list') }}">Video Previews</a></li>
             <li><a href="{{ url_for('public.home') }}#pricing">Pricing</a></li>
             <li><a href="{{ url_for('public.home') }}#contact" class="nav-cta">Get Started</a></li>
         </ul>
@@ -99,7 +100,7 @@
 
     <button class="back-top" id="backTop" aria-label="Back to top"><i class="ri-arrow-up-line"></i></button>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20261010-custom-video-track') }}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

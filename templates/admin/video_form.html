@@ -1,0 +1,123 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ 'Edit Product Video' if video else 'Add Product Video' }}{% endblock %}
+{% block admin_content %}
+{% set f = form if form is not none else video %}
+<div class="video-admin-heading">
+    <div>
+        <p class="video-admin-eyebrow"><i class="ri-movie-2-line" aria-hidden="true"></i> VIDEO LIBRARY</p>
+        <h2>{{ 'Update your video details' if video else 'Bring your next video to the library' }}</h2>
+        <p class="video-admin-intro">Upload original-quality MP4 or WEBM video, add a poster image, and manage the published video library.</p>
+    </div>
+    <a href="{{ url_for('admin.videos_index') }}" class="a-btn video-back-link"><i class="ri-arrow-left-line" aria-hidden="true"></i> Video library</a>
+</div>
+
+<form method="POST" action="{{ url_for('admin.videos_edit', video_id=video.id) if video else url_for('admin.videos_new') }}" enctype="multipart/form-data" class="video-editor" data-chunked-video-upload data-chunk-size="{{ config.VIDEO_UPLOAD_CHUNK_MB * 1024 * 1024 }}" data-max-video-size="{{ config.MAX_VIDEO_UPLOAD_MB * 1024 * 1024 }}" data-max-video-mb="{{ config.MAX_VIDEO_UPLOAD_MB }}" data-chunk-url="{{ url_for('admin.videos_upload_chunk') }}" data-complete-url="{{ url_for('admin.videos_upload_complete') }}" data-abort-url="{{ url_for('admin.videos_upload_abort') }}" {% if video %}data-video-id="{{ video.id }}"{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <section class="admin-panel video-editor-panel" aria-labelledby="video-details-heading">
+        <div class="video-panel-heading">
+            <span class="video-panel-icon"><i class="ri-equalizer-2-line" aria-hidden="true"></i></span>
+            <div>
+                <p class="video-admin-eyebrow">VIDEO DETAILS</p>
+                <h3 id="video-details-heading">Tell viewers about this video</h3>
+            </div>
+        </div>
+
+        <div class="admin-form-group">
+            <label for="title">Video title <span class="video-required">Required</span></label>
+            <input type="text" id="title" name="title" maxlength="200" required placeholder="e.g. Product walkthrough" value="{{ f.title if f else '' }}">
+            <div class="admin-help-text">A clear, descriptive title (up to 200 characters).</div>
+        </div>
+
+        <div class="admin-form-group">
+            <label for="description">Description <span class="video-required">Required</span></label>
+            <textarea id="description" name="description" required maxlength="5000" placeholder="Add a short description to help viewers understand the video.">{{ f.description if f else '' }}</textarea>
+            <div class="admin-help-text">This description appears with the video on your website.</div>
+        </div>
+
+        <div class="video-upload-divider"></div>
+        <div class="video-panel-heading video-media-heading">
+            <span class="video-panel-icon"><i class="ri-video-upload-line" aria-hidden="true"></i></span>
+            <div>
+                <p class="video-admin-eyebrow">VIDEO FILE</p>
+                <h3>{{ 'Replace video file' if video else 'Upload your video' }}</h3>
+            </div>
+        </div>
+
+        {% if video %}
+        <div class="video-current-media">
+            <p class="video-field-caption">Current video</p>
+            <video class="admin-current-video" controls playsinline preload="metadata" {% if video.thumbnail_path %}poster="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}"{% endif %} aria-label="Current video: {{ video.title }}">
+                <source src="{{ url_for('public.uploaded_file', filename=video.video_path) }}" type="{{ 'video/webm' if video.video_path.endswith('.webm') else 'video/mp4' }}">
+            </video>
+            <p class="admin-help-text">Leave the upload empty to keep this video. Choosing a replacement uploads the new original file.</p>
+        </div>
+        {% endif %}
+
+        <div class="video-dropzone" data-video-dropzone role="group" aria-label="Choose a video file or drag one here">
+            <input type="file" id="video" name="video" accept=".mp4,.webm,video/mp4,video/webm" class="video-file-input" data-video-file {{ 'required' if not video else '' }}>
+            <span class="video-drop-icon"><i class="ri-upload-cloud-2-line" aria-hidden="true"></i></span>
+            <strong data-video-drop-prompt>Drag and drop your video here</strong>
+            <span class="video-drop-subtext">MP4 or WEBM · Up to {{ config.MAX_VIDEO_UPLOAD_MB }} MB</span>
+            <button class="a-btn a-btn-primary video-select-button" type="button" data-video-browse><i class="ri-folder-upload-line" aria-hidden="true"></i> Select Video</button>
+            <span class="video-drop-hint">Large files upload in {{ config.VIDEO_UPLOAD_CHUNK_MB }} MB chunks.</span>
+        </div>
+        <p class="video-file-error" data-video-file-error role="alert" hidden></p>
+
+        <div class="video-file-details" data-video-file-details hidden>
+            <div class="video-file-details-icon"><i class="ri-file-video-line" aria-hidden="true"></i></div>
+            <div class="video-file-details-copy">
+                <strong data-video-filename></strong>
+                <span data-video-file-meta></span>
+            </div>
+            <span class="video-ready-badge"><i class="ri-checkbox-circle-line" aria-hidden="true"></i> Ready</span>
+        </div>
+
+        <div class="video-preview-panel" data-video-preview-panel {% if not video %}hidden{% endif %}>
+            <div class="video-preview-header">
+                <div><p class="video-admin-eyebrow">PREVIEW</p><h4>Video preview</h4></div>
+                <span class="video-preview-duration" data-video-duration></span>
+            </div>
+            <video class="video-local-preview" data-video-preview controls playsinline preload="metadata" {% if video and video.thumbnail_path %}poster="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}"{% endif %} {% if video %}src="{{ url_for('public.uploaded_file', filename=video.video_path) }}"{% endif %} aria-label="Selected video preview"></video>
+        </div>
+
+        <div class="video-upload-divider"></div>
+        <div class="video-thumbnail-field">
+            <div class="video-thumbnail-copy">
+                <label for="thumbnail">Poster image <span class="video-optional">Optional</span></label>
+                <p class="admin-help-text">Add a still image to represent the video before playback.</p>
+                <input type="file" id="thumbnail" name="thumbnail" accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" data-video-thumbnail data-max-thumbnail-size="{{ config.MAX_UPLOAD_MB * 1024 * 1024 }}" data-max-thumbnail-mb="{{ config.MAX_UPLOAD_MB }}">
+                <div class="admin-help-text">PNG, JPG, GIF, or WEBP · Up to {{ config.MAX_UPLOAD_MB }} MB{% if video and video.thumbnail_path %} · Leave empty to keep the current image{% endif %}</div>
+                {% if video and video.thumbnail_path %}
+                <label class="admin-checkbox video-remove-thumbnail">
+                    <input type="checkbox" name="remove_thumbnail">
+                    Remove current poster image
+                </label>
+                {% endif %}
+            </div>
+            <div class="video-poster-preview-wrap">
+                <img class="video-poster-preview" data-video-poster-preview {% if video and video.thumbnail_path %}src="{{ url_for('public.uploaded_file', filename=video.thumbnail_path) }}"{% else %}hidden{% endif %} alt="Video poster preview">
+                <span class="video-poster-placeholder" data-video-poster-placeholder {% if video and video.thumbnail_path %}hidden{% endif %}><i class="ri-image-line" aria-hidden="true"></i><span>Poster preview</span></span>
+            </div>
+        </div>
+
+        <div class="video-form-footer">
+            <div class="video-publication-note">
+                <span class="video-live-dot"></span>
+                <div><strong>Visible on your website</strong><span>Saved product videos are published immediately.</span></div>
+            </div>
+            <div class="admin-form-actions">
+                <a href="{{ url_for('admin.videos_index') }}" class="a-btn">Cancel</a>
+                <button type="submit" class="a-btn a-btn-primary video-submit-button"><i class="ri-save-3-line" aria-hidden="true"></i> {{ 'Save Changes' if video else 'Upload Video' }}</button>
+            </div>
+        </div>
+
+        <div class="video-upload-status" data-video-upload-progress data-video-upload-state="ready" role="status" aria-live="polite">
+            <span class="video-status-icon" data-video-status-icon><i class="ri-information-line" aria-hidden="true"></i></span>
+            <div class="video-status-copy"><strong data-video-status-title>Ready to upload</strong><p data-video-upload-status>{% if video %}Save your changes, or choose a replacement video file.{% else %}Complete the details and select a video file to begin.{% endif %}</p></div>
+            <progress data-video-progress max="100" value="0" aria-label="Video upload progress" hidden></progress>
+            <span class="video-progress-value" data-video-progress-value hidden>0%</span>
+        </div>
+    </section>
+</form>
+{% endblock %}
