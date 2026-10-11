@@ -1,13 +1,16 @@
 import os
+import tempfile
 from datetime import timedelta
 
+import click
 from dotenv import load_dotenv
 from flask import Flask, Request as FlaskRequest, current_app, jsonify, render_template, request
+from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 
 load_dotenv()  # reads .env into environment variables before Config is built
 
-from config import Config
+from config import Config, normalize_database_uri
 from extensions import db, migrate, csrf
 
 
@@ -34,15 +37,24 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.request_class = UploadAwareRequest
     app.config.from_object(config_class)
+    app.config["SQLALCHEMY_DATABASE_URI"] = normalize_database_uri(
+        app.config["SQLALCHEMY_DATABASE_URI"],
+        require_absolute_sqlite=app.config.get("FLASK_ENV") == "production",
+    )
     app.permanent_session_lifetime = timedelta(hours=8)
 
-    # Ensure instance/ and uploads/ exist
+    database_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+    if database_uri.startswith("sqlite:"):
+        from sqlalchemy.engine import make_url
+
+        database_path = make_url(database_uri).database
+        if database_path and database_path != ":memory:" and not database_path.startswith("file:"):
+            os.makedirs(os.path.dirname(database_path), exist_ok=True)
+
     os.makedirs(os.path.join(app.root_path, "instance"), exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "news"), exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "products"), exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "projects"), exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "videos"), exist_ok=True)
-    os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], "video-thumbnails"), exist_ok=True)
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    for upload_dir in ("news", "products", "projects", "videos", "video-thumbnails"):
+        os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], upload_dir), exist_ok=True)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -103,6 +115,74 @@ def create_app(config_class=Config):
 
 
 app = create_app()
+
+
+def database_schema_problems(engine, metadata):
+    inspector = inspect(engine)
+    actual_tables = set(inspector.get_table_names())
+    expected_tables = set(metadata.tables)
+    problems = [
+        f"missing table {table_name}"
+        for table_name in sorted(expected_tables - actual_tables)
+    ]
+    for table_name in sorted(expected_tables & actual_tables):
+        expected_columns = {column.name for column in metadata.tables[table_name].columns}
+        actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        missing_columns = sorted(expected_columns - actual_columns)
+        if missing_columns:
+            problems.append(f"{table_name} missing columns {', '.join(missing_columns)}")
+    return problems
+
+
+@app.cli.command("verify-deployment")
+def verify_deployment_command():
+    """Check that the selected database schema and persistent paths are ready."""
+    schema_errors = database_schema_problems(db.engine, db.metadata)
+    for error in schema_errors:
+        click.echo(f"Schema check failed: {error}", err=True)
+
+    engine_url = db.engine.url
+    if engine_url.get_backend_name() == "sqlite":
+        click.echo(f"SQLite database: {engine_url.database}")
+    else:
+        click.echo(f"Database backend: {engine_url.get_backend_name()}")
+
+    storage_paths = {
+        "instance": app.instance_path,
+        "uploads": app.config["UPLOAD_FOLDER"],
+        "news uploads": os.path.join(app.config["UPLOAD_FOLDER"], "news"),
+        "product uploads": os.path.join(app.config["UPLOAD_FOLDER"], "products"),
+        "project uploads": os.path.join(app.config["UPLOAD_FOLDER"], "projects"),
+        "video uploads": os.path.join(app.config["UPLOAD_FOLDER"], "videos"),
+        "video thumbnails": os.path.join(app.config["UPLOAD_FOLDER"], "video-thumbnails"),
+    }
+    storage_errors = []
+    for label, path in storage_paths.items():
+        try:
+            os.makedirs(path, exist_ok=True)
+            with tempfile.NamedTemporaryFile(prefix=".deployment-check-", dir=path, delete=True):
+                pass
+        except OSError as error:
+            storage_errors.append(f"{label} is not writable ({type(error).__name__})")
+    for error in storage_errors:
+        click.echo(f"Storage check failed: {error}", err=True)
+
+    if schema_errors or storage_errors:
+        raise click.ClickException("Deployment checks failed; apply migrations or fix the listed paths.")
+    click.echo(f"Database schema is present ({len(db.metadata.tables)} application tables).")
+    click.echo("Persistent upload and instance directories are writable.")
+
+
+@app.cli.command("check-smtp")
+def check_smtp_command():
+    """Check SMTP connectivity and authentication without sending an email."""
+    from services.email_service import check_smtp_connection
+
+    if not check_smtp_connection():
+        raise click.ClickException(
+            "SMTP connection/authentication failed. Check provider settings and server logs."
+        )
+    click.echo("SMTP connection and authentication succeeded; no email was sent.")
 
 
 @app.cli.command("create-admin")

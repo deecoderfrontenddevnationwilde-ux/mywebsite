@@ -53,17 +53,55 @@ def send_email(to_address: str, subject: str, html_body: str, text_body: str | N
         msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
+    phase = "connect"
     try:
-        smtp_class = smtplib.SMTP_SSL if current_app.config.get("SMTP_USE_SSL") else smtplib.SMTP
-        with smtp_class(current_app.config["SMTP_HOST"], current_app.config["SMTP_PORT"], timeout=15) as server:
-            if not current_app.config.get("SMTP_USE_SSL"):
-                server.starttls()
+        with _open_smtp_server() as server:
+            phase = "authentication"
             server.login(gmail_address, gmail_password)
+            phase = "message submission"
             server.sendmail(gmail_address, [to_address], msg.as_string())
         logger.info("SMTP accepted an email for delivery")
         return True
-    except (OSError, smtplib.SMTPException, ssl.SSLError, ValueError) as exc:
-        logger.error("SMTP email submission failed (%s)", type(exc).__name__)
+    except (OSError, smtplib.SMTPException, ValueError) as exc:
+        logger.error("SMTP %s failed (%s)", phase, type(exc).__name__)
+        return False
+
+
+def _open_smtp_server():
+    host = current_app.config["SMTP_HOST"]
+    port = current_app.config["SMTP_PORT"]
+    timeout = current_app.config.get("SMTP_TIMEOUT", 20)
+    tls_context = ssl.create_default_context()
+    if current_app.config.get("SMTP_USE_SSL"):
+        return smtplib.SMTP_SSL(host, port, timeout=timeout, context=tls_context)
+
+    server = smtplib.SMTP(host, port, timeout=timeout)
+    try:
+        server.ehlo()
+        server.starttls(context=tls_context)
+        server.ehlo()
+    except (OSError, smtplib.SMTPException, ValueError):
+        server.close()
+        raise
+    return server
+
+
+def check_smtp_connection() -> bool:
+    """Verify SMTP connectivity and authentication without sending a message."""
+    gmail_address = current_app.config.get("GMAIL_ADDRESS")
+    gmail_password = current_app.config.get("GMAIL_APP_PASSWORD")
+    if not gmail_address or not gmail_password:
+        logger.error("SMTP check unavailable because credentials are not configured")
+        return False
+
+    phase = "connect"
+    try:
+        with _open_smtp_server() as server:
+            phase = "authentication"
+            server.login(gmail_address, gmail_password)
+        return True
+    except (OSError, smtplib.SMTPException, ValueError) as exc:
+        logger.error("SMTP connectivity check failed during %s (%s)", phase, type(exc).__name__)
         return False
 
 
