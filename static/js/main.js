@@ -391,6 +391,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const contactForm = document.getElementById('contactForm');
     if (contactForm) {
         const feedback = document.getElementById('contactFeedback');
+        const submissionToken = document.getElementById('contactSubmissionToken');
+        const createSubmissionToken = () => {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+                const random = Math.random() * 16 | 0;
+                return (character === 'x' ? random : (random & 0x3 | 0x8)).toString(16);
+            });
+        };
+        submissionToken.value = createSubmissionToken();
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = contactForm.querySelector('button[type="submit"]');
@@ -403,7 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
                 subject: document.getElementById('service') ? document.getElementById('service').value : '',
-                message: document.getElementById('message').value
+                message: document.getElementById('message').value,
+                contact_reference_code: document.getElementById('contactReferenceCode').value,
+                submission_token: submissionToken.value
             };
 
             try {
@@ -413,13 +426,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
+                const succeeded = res.ok && data.success;
                 if (feedback) {
-                    feedback.textContent = data.message;
-                    feedback.classList.add('show', data.success ? 'success' : 'error');
+                    feedback.textContent = data.message || 'Something went wrong. Please try again.';
+                    feedback.classList.add('show', succeeded ? 'success' : 'error');
                 }
-                if (data.success) {
+                if (succeeded) {
                     btn.textContent = 'Message Sent ✓';
                     contactForm.reset();
+                    submissionToken.value = createSubmissionToken();
                 } else {
                     btn.textContent = orig;
                 }

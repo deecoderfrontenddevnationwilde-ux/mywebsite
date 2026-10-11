@@ -15,6 +15,7 @@ functions in this file.
 from __future__ import annotations
 
 import logging
+import ssl
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -40,12 +41,7 @@ def send_email(to_address: str, subject: str, html_body: str, text_body: str | N
     gmail_password = current_app.config.get("GMAIL_APP_PASSWORD")
 
     if not gmail_address or not gmail_password:
-        logger.warning(
-            "Email not sent (GMAIL_ADDRESS / GMAIL_APP_PASSWORD not configured): "
-            "subject=%r to=%r",
-            subject,
-            to_address,
-        )
+        logger.error("Email not sent because SMTP credentials are not configured")
         return False
 
     msg = MIMEMultipart("alternative")
@@ -64,10 +60,10 @@ def send_email(to_address: str, subject: str, html_body: str, text_body: str | N
                 server.starttls()
             server.login(gmail_address, gmail_password)
             server.sendmail(gmail_address, [to_address], msg.as_string())
-        logger.info("Email sent successfully: subject=%r to=%r", subject, to_address)
+        logger.info("SMTP accepted an email for delivery")
         return True
-    except Exception:
-        logger.exception("Failed to send email to %s (subject=%r)", to_address, subject)
+    except (OSError, smtplib.SMTPException, ssl.SSLError, ValueError) as exc:
+        logger.error("SMTP email submission failed (%s)", type(exc).__name__)
         return False
 
 
@@ -75,6 +71,13 @@ def _notification_email() -> str | None:
     recipient = current_app.config.get("NOTIFICATION_EMAIL")
     if not recipient:
         logger.error("Admin notification email is not configured")
+    return recipient
+
+
+def _contact_notification_email() -> str | None:
+    recipient = current_app.config.get("CONTACT_NOTIFICATION_EMAIL")
+    if not recipient:
+        logger.error("Contact notification email is not configured")
     return recipient
 
 
@@ -91,7 +94,7 @@ def send_new_subscription_notification(subscriber) -> bool:
 
 
 def send_new_contact_notification(contact_message) -> bool:
-    recipient = _notification_email()
+    recipient = _contact_notification_email()
     if not recipient:
         return False
     name = escape(contact_message.name)

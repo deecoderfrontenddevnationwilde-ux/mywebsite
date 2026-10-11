@@ -37,7 +37,10 @@ class Config:
     # --- Email (Gmail SMTP) ---
     GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
     GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
-    NOTIFICATION_EMAIL = os.environ.get("NOTIFICATION_EMAIL") or GMAIL_ADDRESS
+    NOTIFICATION_EMAIL = os.environ.get("NOTIFICATION_EMAIL") or "deecodertechnologiesworldwide@gmail.com"
+    CONTACT_NOTIFICATION_EMAIL = (
+        os.environ.get("CONTACT_NOTIFICATION_EMAIL") or "deecodertechnologiesworldwide@gmail.com"
+    )
     SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
     SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "0") == "1"

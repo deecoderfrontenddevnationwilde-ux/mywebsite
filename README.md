@@ -103,14 +103,16 @@ leave `DATABASE_URL` as-is for SQLite.
    ```
    GMAIL_ADDRESS=your-real-address@gmail.com
    GMAIL_APP_PASSWORD=the-16-character-app-password
-  NOTIFICATION_EMAIL=your-inbox@gmail.com
+  NOTIFICATION_EMAIL=your-newsletter-inbox@gmail.com
+  CONTACT_NOTIFICATION_EMAIL=deecodertechnologiesworldwide@gmail.com
    ```
    Never put these values anywhere except `.env` — they are read only from
    environment variables (see `config.py` and `services/email_service.py`)
    and are never sent to the browser or hard-coded anywhere.
 
-  `NOTIFICATION_EMAIL` receives new newsletter subscription and contact-form
-  notifications. If it is omitted, notifications are sent to `GMAIL_ADDRESS`.
+  `NOTIFICATION_EMAIL` receives newsletter notifications. Contact-form
+  notifications use `CONTACT_NOTIFICATION_EMAIL`, which defaults to the public
+  contact address shown on the website. Set it explicitly if that inbox changes.
   The Flask application loads `.env` relative to `config.py`, so a WSGI server's
   working directory does not affect local `.env` loading. In hosted production,
   set the same variables in the platform's environment/secrets settings.

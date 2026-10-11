@@ -15,6 +15,10 @@ class ContactMessage(db.Model):
     email = db.Column(db.String(255), nullable=False, index=True)
     subject = db.Column(db.String(200), nullable=True)
     message = db.Column(db.Text, nullable=False)
+    request_fingerprint = db.Column(db.String(64), nullable=True, index=True)
+    submission_token = db.Column(db.String(36), nullable=True, unique=True, index=True)
+    notification_email_submitted = db.Column(db.Boolean, default=False, nullable=False)
+    confirmation_email_submitted = db.Column(db.Boolean, default=False, nullable=False)
 
     status = db.Column(db.String(20), default=STATUS_PENDING, nullable=False, index=True)
     admin_note = db.Column(db.Text, nullable=True)

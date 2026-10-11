@@ -1,7 +1,12 @@
+import hashlib
+import hmac
 import re
+import uuid
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify, current_app
 from email_validator import validate_email, EmailNotValidError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import db
 from models import News, Product, Subscriber, ContactMessage
@@ -13,6 +18,9 @@ from services.email_service import (
 )
 
 api_bp = Blueprint("api", __name__)
+
+CONTACT_RATE_LIMIT = 5
+CONTACT_RATE_WINDOW = timedelta(hours=1)
 
 
 def _news_to_dict(n: News) -> dict:
@@ -128,45 +136,196 @@ def api_subscribe():
     )
 
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
 @api_bp.route("/contact", methods=["POST"])
 def api_contact():
-    payload = request.get_json(silent=True) or request.form
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Please submit a valid form."}), 415
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return jsonify({"success": False, "message": "Please submit a valid form."}), 400
+    if not isinstance(payload, dict):
+        return jsonify({"success": False, "message": "Please submit a valid form."}), 400
+
+    for field in ("name", "email", "message"):
+        if not isinstance(payload.get(field, ""), str):
+            return jsonify({"success": False, "message": "Please submit a valid form."}), 400
+    for field in ("subject", "service", "website", "contact_reference_code", "submission_token"):
+        if payload.get(field) is not None and not isinstance(payload[field], str):
+            return jsonify({"success": False, "message": "Please submit a valid form."}), 400
+
     name = (payload.get("name") or "").strip()
     email = (payload.get("email") or "").strip()
-    subject = (payload.get("subject") or payload.get("service") or "").strip()
+    subject_input = payload.get("subject") or payload.get("service") or ""
+    subject = re.sub(r"\s+", " ", subject_input.strip())
     message = (payload.get("message") or "").strip()
+    raw_submission_token = payload.get("submission_token", "")
+    try:
+        submission_token = str(uuid.UUID(raw_submission_token))
+    except (AttributeError, ValueError):
+        return jsonify({"success": False, "message": "Please refresh the page and try again."}), 400
+
+    # Check only the explicit honeypot; "website" is ignored for older clients
+    # where browser autofill could populate the former honeypot input.
+    if (payload.get("contact_reference_code") or "").strip():
+        return jsonify({"success": False, "message": "Unable to submit this request."}), 400
 
     errors = {}
     if not name:
         errors["name"] = "Name is required."
-    if not email or not _EMAIL_RE.match(email):
+    elif len(name) > 150:
+        errors["name"] = "Name must be 150 characters or fewer."
+    try:
+        valid_email = validate_email(email, check_deliverability=False)
+        email = valid_email.normalized
+    except EmailNotValidError:
         errors["email"] = "A valid email is required."
+    if len(email) > 254:
+        errors["email"] = "A valid email is required."
+    if len(subject) > 200:
+        errors["subject"] = "Subject must be 200 characters or fewer."
     if not message:
         errors["message"] = "Message is required."
+    elif len(message) > 5000:
+        errors["message"] = "Message must be 5000 characters or fewer."
 
     if errors:
         return jsonify({"success": False, "message": "Please fix the errors below.", "errors": errors}), 400
 
-    contact_message = ContactMessage(name=name, email=email, subject=subject, message=message)
-    db.session.add(contact_message)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception("Failed to save contact message")
-        return jsonify({"success": False, "message": "Something went wrong. Please try again."}), 500
+    existing_message = ContactMessage.query.filter_by(submission_token=submission_token).first()
+    if existing_message:
+        if (
+            existing_message.name != name
+            or existing_message.email != email
+            or existing_message.subject != (subject or None)
+            or existing_message.message != message
+        ):
+            return jsonify(
+                {"success": False, "message": "This submission token has already been used."}
+            ), 409
+        contact_message = existing_message
+    else:
+        contact_message = None
 
-    if not send_contact_submission_confirmation(contact_message):
-        current_app.logger.warning("Contact confirmation email failed for message id=%s", contact_message.id)
-    if not send_new_contact_notification(contact_message):
-        current_app.logger.warning("Contact admin notification email failed for message id=%s", contact_message.id)
+    # Only a keyed digest is stored; raw client IP addresses are not retained.
+    remote_addr = request.remote_addr or "unknown"
+    fingerprint = hmac.new(
+        current_app.config["SECRET_KEY"].encode("utf-8"),
+        remote_addr.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - CONTACT_RATE_WINDOW
+    if contact_message is None:
+        recent_submissions = ContactMessage.query.filter(
+            ContactMessage.request_fingerprint == fingerprint,
+            ContactMessage.created_at >= cutoff,
+        ).count()
+        if recent_submissions >= CONTACT_RATE_LIMIT:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Too many submissions. Please wait before trying again.",
+                }
+            ), 429
+
+        contact_message = ContactMessage(
+            name=name,
+            email=email,
+            subject=subject or None,
+            message=message,
+            request_fingerprint=fingerprint,
+            submission_token=submission_token,
+        )
+        db.session.add(contact_message)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            contact_message = ContactMessage.query.filter_by(submission_token=submission_token).first()
+            if not contact_message:
+                current_app.logger.error("Failed to save contact message (integrity error)")
+                return jsonify({"success": False, "message": "Something went wrong. Please try again."}), 500
+            if (
+                contact_message.name != name
+                or contact_message.email != email
+                or contact_message.subject != (subject or None)
+                or contact_message.message != message
+            ):
+                return jsonify(
+                    {"success": False, "message": "This submission token has already been used."}
+                ), 409
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.error("Failed to save contact message (%s)", type(exc).__name__)
+            return jsonify({"success": False, "message": "Something went wrong. Please try again."}), 500
+
+    if not contact_message.notification_email_submitted:
+        if not send_new_contact_notification(contact_message):
+            current_app.logger.error(
+                "Contact notification email was not accepted by the mail service for message id=%s",
+                contact_message.id,
+            )
+            return jsonify(
+                {
+                    "success": False,
+                    "saved": True,
+                    "message": (
+                        "Your message was saved, but we couldn't notify our team. "
+                        "Please retry shortly or contact us directly if your request is urgent."
+                    ),
+                }
+            ), 503
+        contact_message.notification_email_submitted = True
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.error(
+                "Failed to record contact notification status (%s)",
+                type(exc).__name__,
+            )
+            return jsonify(
+                {
+                    "success": False,
+                    "saved": True,
+                    "message": "Your message was saved, but its notification status could not be recorded.",
+                }
+            ), 500
+
+    if not contact_message.confirmation_email_submitted:
+        confirmation_sent = send_contact_submission_confirmation(contact_message)
+        if not confirmation_sent:
+            current_app.logger.warning(
+                "Contact confirmation email was not accepted by the mail service for message id=%s",
+                contact_message.id,
+            )
+        else:
+            contact_message.confirmation_email_submitted = True
+            try:
+                db.session.commit()
+            except SQLAlchemyError as exc:
+                db.session.rollback()
+                current_app.logger.error(
+                    "Failed to record contact confirmation status (%s)",
+                    type(exc).__name__,
+                )
+                return jsonify(
+                    {
+                        "success": False,
+                        "saved": True,
+                        "message": "Your message was saved, but its notification status could not be recorded.",
+                    }
+                ), 500
+    else:
+        confirmation_sent = True
 
     return jsonify(
         {
             "success": True,
-            "message": "Your message has been submitted successfully and is waiting for admin approval.",
+            "message": (
+                "Your message has been submitted to our team."
+                if confirmation_sent
+                else "Your message was submitted to our team, but we couldn't send a confirmation email."
+            ),
         }
     )
