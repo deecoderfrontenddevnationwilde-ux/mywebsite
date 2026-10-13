@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ company_name }} | Innovative Tech Solutions{% endblock %}</title>
-    <meta name="description" content="{% block description %}Dee Coder Technologies builds high-performance web applications, cybersecurity solutions, and scalable digital products. Engineering the digital future.{% endblock %}">
+    <title>{% block title %}DeeCoder Technologies | Innovative Tech Solutions{% endblock %}</title>
+    <meta name="description" content="{% block description %}DeeCoder Technologies builds high-performance web applications, cybersecurity solutions, and scalable digital products. Engineering the digital future.{% endblock %}">
     <meta name="keywords" content="web development, cybersecurity, UI/UX design, front-end, React, code review">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
@@ -27,8 +27,8 @@
 
     <nav class="nav">
         <a href="{{ url_for('public.home') }}" class="nav-brand">
-            <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="Dee Coder">
-            Dee <span>Coder</span>
+            <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="DeeCoder Technologies">
+            Dee<span>Coder</span>
         </a>
         <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -52,7 +52,7 @@
         <div class="container">
             <div class="footer-top">
                 <div class="footer-brand">
-                    <h3>Dee <span>Coder</span> Technologies</h3>
+                    <h3>Dee<span>Coder</span> Technologies</h3>
                     <p>Front-end developer building clean, responsive websites and providing professional code reviews.</p>
                     <div class="socials">
                         <a href="https://github.com/deecoderfrontenddevnationwilde-ux" target="_blank" aria-label="GitHub"><i class="ri-github-fill"></i></a>
@@ -93,7 +93,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy;2023 - 2026 Dee Coder Technologies. Built with care · All rights reserved. · <a href="{{ url_for('admin.login') }}" style="color:inherit;">Admin</a></p>
+                <p>&copy;2023 - 2026 DeeCoder Technologies. Built with care · All rights reserved. · <a href="{{ url_for('admin.login') }}" style="color:inherit;">Admin</a></p>
             </div>
         </div>
     </footer>

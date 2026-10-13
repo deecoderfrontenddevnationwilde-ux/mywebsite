@@ -65,7 +65,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # --- Company / site info (used in emails & templates) ---
-    COMPANY_NAME = os.environ.get("COMPANY_NAME", "Dee Coder Technologies")
+    COMPANY_NAME = "DeeCoder Technologies"
     SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:5000")
 
     # --- Email (Gmail SMTP) ---

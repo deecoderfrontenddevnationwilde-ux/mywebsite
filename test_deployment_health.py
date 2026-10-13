@@ -64,6 +64,10 @@ class DeploymentHealthTests(unittest.TestCase):
     def test_public_pages_and_empty_admin_video_sections_load(self):
         homepage = self.client.get("/")
         self.assertEqual(homepage.status_code, 200)
+        self.assertIn(
+            b"<title>DeeCoder Technologies | Innovative Tech Solutions</title>",
+            homepage.data,
+        )
 
         self.assertEqual(self.client.get("/admin/dashboard").status_code, 302)
         self.assertEqual(self.client.get("/admin/videos").status_code, 302)

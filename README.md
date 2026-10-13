@@ -1,4 +1,4 @@
-# Dee Coder Technologies — Full-Stack Website
+# DeeCoder Technologies — Full-Stack Website
 
 Your original HTML/CSS front end, now backed by a real Flask + SQLAlchemy
 application: dynamic News and Products, a newsletter, a moderated contact

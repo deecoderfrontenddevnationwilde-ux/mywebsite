@@ -38,7 +38,7 @@ FLASK_DEBUG=0
 
 DATABASE_URL=sqlite:////home/YOUR_USERNAME/company_website/instance/company.db
 
-COMPANY_NAME=Dee Coder Technologies
+COMPANY_NAME=DeeCoder Technologies
 SITE_URL=https://YOUR_USERNAME.pythonanywhere.com
 
 GMAIL_ADDRESS=your-email@gmail.com
