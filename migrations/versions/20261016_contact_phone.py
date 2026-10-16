@@ -16,10 +16,24 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table("contact_messages") as batch_op:
-        batch_op.add_column(sa.Column("phone", sa.String(length=50), nullable=True))
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    if not inspector.has_table("contact_messages"):
+        raise RuntimeError(
+            "Cannot add contact_messages.phone because contact_messages does not exist."
+        )
+    columns = {column["name"] for column in inspector.get_columns("contact_messages")}
+    if "phone" not in columns:
+        op.add_column(
+            "contact_messages",
+            sa.Column("phone", sa.String(length=50), nullable=True),
+        )
 
 
 def downgrade():
-    with op.batch_alter_table("contact_messages") as batch_op:
-        batch_op.drop_column("phone")
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    if inspector.has_table("contact_messages"):
+        columns = {column["name"] for column in inspector.get_columns("contact_messages")}
+        if "phone" in columns:
+            op.drop_column("contact_messages", "phone")

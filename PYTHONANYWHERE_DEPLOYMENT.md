@@ -265,6 +265,7 @@ Common fixes:
 
 - `ModuleNotFoundError`: activate the configured virtualenv and run `pip install -r requirements.txt`.
 - `cannot import name application`: the WSGI file must contain `from app import app as application` after adding the project path to `sys.path`.
+- `no such column: contact_messages.phone`: back up the SQLite database used by the WSGI app, confirm the Bash console uses that same absolute database path, deploy the migration files, and run `flask --app app db upgrade`. The contact-phone migration is repeatable and the latest reconciliation migration adds the nullable column only if it is missing; it does not recreate the table or remove existing contact records. Reload the web app only after the migration succeeds.
 - `no such table`: confirm the WSGI process and CLI use the same absolute `DATABASE_URL`, back up the existing database, then run `flask --app app db upgrade`. Never reset a production database to fix a missing table.
 - `unable to open database file` or upload permission errors: confirm the paths in `.env` and run `mkdir -p instance uploads/news uploads/products uploads/projects`.
 - `SMTPServerDisconnected` during login: run `flask --app app check-smtp` from a PythonAnywhere Bash console. It checks connectivity, TLS, and authentication without sending an email. Confirm the SMTP provider, port/TLS pairing, App Password, and PythonAnywhere account network policy. If it passes, send a separate deliberate test only to a mailbox you control and check provider bounce/delivery logs.
