@@ -66,7 +66,9 @@ class Config:
 
     # --- Company / site info (used in emails & templates) ---
     COMPANY_NAME = "DeeCoder Technologies"
-    SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:5000")
+    SITE_URL = os.environ.get(
+        "SITE_URL", "https://deecodertechnologies.pythonanywhere.com"
+    )
 
     # --- Email (Gmail SMTP) ---
     GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")

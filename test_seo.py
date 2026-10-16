@@ -144,6 +144,48 @@ class SearchEngineOptimizationTests(unittest.TestCase):
         self.assertIn("Disallow: /uploads/", content)
         self.assertIn("Sitemap: https://www.deecoder.test/sitemap.xml", content)
 
+    def test_official_site_url_publishes_expected_absolute_sitemap_urls(self):
+        official_origin = "https://deecodertechnologies.pythonanywhere.com"
+        self.app.config["SITE_URL"] = official_origin
+
+        sitemap_response = self.client.get("/sitemap.xml")
+        self.assertEqual(sitemap_response.status_code, 200)
+        self.assertIn("application/xml", sitemap_response.content_type)
+        root = ET.fromstring(sitemap_response.data)
+        namespace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        locations = [
+            entry.text
+            for entry in root.findall("s:url/s:loc", namespace)
+        ]
+
+        for path in (
+            "/",
+            "/about",
+            "/contact",
+            "/news",
+            "/projects",
+            "/products",
+            "/videos",
+            "/terms",
+            "/privacy",
+            "/news/published-story",
+            "/products/published-product",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(f"{official_origin}{path}", locations)
+        self.assertEqual(len(locations), len(set(locations)))
+        self.assertTrue(all(location.startswith(official_origin) for location in locations))
+        self.assertFalse(any(urlsplit(location).query or urlsplit(location).fragment for location in locations))
+        self.assertFalse(any("localhost" in location or "127.0.0.1" in location for location in locations))
+        self.assertFalse(any("/admin" in location or "/api/" in location for location in locations))
+
+        robots_response = self.client.get("/robots.txt")
+        self.assertEqual(robots_response.status_code, 200)
+        self.assertIn(
+            f"Sitemap: {official_origin}/sitemap.xml",
+            robots_response.get_data(as_text=True),
+        )
+
     def test_sitemap_uses_canonical_urls_and_only_published_content(self):
         response = self.client.get("/sitemap.xml")
         self.assertEqual(response.status_code, 200)

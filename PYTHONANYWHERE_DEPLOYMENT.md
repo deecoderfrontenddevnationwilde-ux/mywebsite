@@ -39,7 +39,7 @@ FLASK_DEBUG=0
 DATABASE_URL=sqlite:////home/YOUR_USERNAME/company_website/instance/company.db
 
 COMPANY_NAME=DeeCoder Technologies
-SITE_URL=https://YOUR_USERNAME.pythonanywhere.com
+SITE_URL=https://deecodertechnologies.pythonanywhere.com
 
 GMAIL_ADDRESS=your-email@gmail.com
 GMAIL_APP_PASSWORD=your-gmail-app-password
@@ -56,12 +56,12 @@ VIDEO_UPLOAD_CHUNK_MB=8
 
 Replace `YOUR_USERNAME` with the PythonAnywhere username. A Gmail App Password is required; do not use the normal Gmail password. `DATABASE_URL` must be the absolute path to the existing persistent production database. Do not point it at a cloned or test database. Relative SQLite paths resolve against the project directory in development and are rejected in production.
 
-Set `SITE_URL` to the exact public HTTPS origin visitors use, replacing the
-placeholder with the actual PythonAnywhere hostname or verified custom domain.
-Reload the web app, then check `/robots.txt` and `/sitemap.xml`. The application
-intentionally withholds canonical URLs and the sitemap while `SITE_URL` is
-empty, non-HTTPS, or still a placeholder. Search Console and Bing Webmaster
-Tools submission steps are in the README's **Search engine setup** section.
+Set `SITE_URL` to `https://deecodertechnologies.pythonanywhere.com` in the
+PythonAnywhere web app's environment (or its project `.env` file). Reload the
+web app, then check `/robots.txt` and `/sitemap.xml`. The application withholds
+canonical URLs and the sitemap if `SITE_URL` is empty, non-HTTPS, or a
+placeholder. Search Console and Bing Webmaster Tools submission steps are in
+the README's **Search engine setup** section.
 
 Use an SMTP host, port, and TLS mode supported by both your provider and PythonAnywhere account. For Gmail, the compatible pairs are port 587 with `SMTP_USE_SSL=0` (STARTTLS), or port 465 with `SMTP_USE_SSL=1` (implicit TLS); do not mix the port and mode. PythonAnywhere plan/network policy may restrict external SMTP, so a local SMTP test does not verify that the service is reachable from the hosted account.
 
