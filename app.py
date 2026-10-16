@@ -193,27 +193,52 @@ def create_app(config_class=Config):
     def inject_globals():
         site_url = seo_site_url(app.config.get("SITE_URL"))
         canonical_url = f"{site_url}{request.path}" if site_url else None
+        organization_id = f"{site_url}/#organization" if site_url else None
+        homepage_url = f"{site_url}/" if site_url else None
+        organization_schema = {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "@id": organization_id,
+            "name": "DeeCoder Technologies",
+            "alternateName": "DeeCoder",
+            "url": homepage_url,
+            "founder": {
+                "@type": "Person",
+                "name": "Donatus Chukwu Paul",
+            },
+            "logo": f"{site_url}{url_for('static', filename='images/DeeCoder_Technologies_icon.png')}",
+            "description": (
+                "DeeCoder Technologies builds websites, web applications, "
+                "e-commerce platforms, and educational software for businesses, "
+                "schools, and individuals."
+            ),
+            "sameAs": [
+                "https://github.com/deecoderfrontenddevnationwilde-ux",
+                "https://www.linkedin.com/in/dee-coder-front-end-dev-dee-coder-814a2b416",
+                "https://www.tiktok.com/@deecoderfrontenddev",
+            ],
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer support",
+                "email": "deecodertechnologiesworldwide@gmail.com",
+                "telephone": "+2348075346224",
+            },
+        } if site_url else None
+        website_schema = {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "@id": f"{site_url}/#website",
+            "name": "DeeCoder Technologies",
+            "alternateName": "DeeCoder",
+            "url": homepage_url,
+            "publisher": {"@id": organization_id},
+        } if site_url else None
         return {
             "company_name": app.config.get("COMPANY_NAME"),
             "seo_site_url": site_url,
             "canonical_url": canonical_url,
-            "organization_schema": {
-                "@context": "https://schema.org",
-                "@type": "Organization",
-                "name": "DeeCoder Technologies",
-                "url": site_url,
-                "description": (
-                    "DeeCoder Technologies builds web applications, responsive "
-                    "interfaces, and software solutions with a focus on secure, "
-                    "reliable digital experiences."
-                ),
-                "contactPoint": {
-                    "@type": "ContactPoint",
-                    "contactType": "customer support",
-                    "email": "deecodertechnologiesworldwide@gmail.com",
-                    "telephone": "+2348075346224",
-                },
-            } if site_url else None,
+            "organization_schema": organization_schema,
+            "website_schema": website_schema,
         }
 
     return app

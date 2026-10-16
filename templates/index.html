@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% block title %}DeeCoder Technologies | Official Website{% endblock %}
-{% block description %}DeeCoder Technologies builds responsive websites, web applications, and secure digital products, and provides software development and cybersecurity services.{% endblock %}
+{% block title %}DeeCoder Technologies | Digital Technology &amp; Software Solutions{% endblock %}
+{% block description %}DeeCoder Technologies builds websites, web applications, e-commerce platforms, and educational software for businesses, schools, and individuals.{% endblock %}
 {% block structured_data %}
-{% if organization_schema %}
-<script type="application/ld+json">{{ organization_schema|tojson }}</script>
-{% endif %}
+{% if organization_schema %}<script type="application/ld+json">{{ organization_schema|tojson }}</script>{% endif %}
+{% if website_schema %}<script type="application/ld+json">{{ website_schema|tojson }}</script>{% endif %}
 {% endblock %}
 {% block content %}
 
@@ -23,7 +22,7 @@
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <img src="{{ url_for('static', filename='images/DeeCoder_Technologies_icon.png') }}" alt="DeeCoder Technologies">
+                    <img src="{{ url_for('static', filename='images/DeeCoder_Technologies_icon.png') }}" alt="DeeCoder Technologies logo">
                 </div>
             </div>
         </div>

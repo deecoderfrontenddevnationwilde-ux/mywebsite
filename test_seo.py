@@ -89,7 +89,10 @@ class SearchEngineOptimizationTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         soup = BeautifulSoup(response.data, "html.parser")
-        self.assertEqual(soup.title.string, "DeeCoder Technologies | Official Website")
+        self.assertEqual(
+            soup.title.string,
+            "DeeCoder Technologies | Digital Technology & Software Solutions",
+        )
         self.assertIn("DeeCoder Technologies", soup.h1.get_text())
         self.assertEqual(
             soup.find("link", rel="canonical")["href"],
@@ -104,18 +107,53 @@ class SearchEngineOptimizationTests(unittest.TestCase):
                 self.assertEqual(len(soup.find_all("meta", property=attribute)), 1)
 
         scripts = soup.find_all("script", type="application/ld+json")
-        self.assertEqual(len(scripts), 1)
-        schema = json.loads(scripts[0].string)
-        self.assertEqual(schema["@type"], "Organization")
-        self.assertEqual(schema["name"], "DeeCoder Technologies")
-        self.assertEqual(schema["url"], "https://www.deecoder.test")
+        self.assertEqual(len(scripts), 2)
+        schemas = [json.loads(script.string) for script in scripts]
+        organization_schema = next(
+            schema for schema in schemas if schema["@type"] == "Organization"
+        )
+        website_schema = next(
+            schema for schema in schemas if schema["@type"] == "WebSite"
+        )
+        self.assertEqual(organization_schema["@context"], "https://schema.org")
+        self.assertEqual(organization_schema["name"], "DeeCoder Technologies")
+        self.assertEqual(organization_schema["alternateName"], "DeeCoder")
+        self.assertEqual(organization_schema["@id"], "https://www.deecoder.test/#organization")
+        self.assertEqual(organization_schema["url"], "https://www.deecoder.test/")
         self.assertEqual(
-            schema["contactPoint"]["email"],
+            organization_schema["founder"],
+            {"@type": "Person", "name": "Donatus Chukwu Paul"},
+        )
+        self.assertEqual(
+            organization_schema["logo"],
+            "https://www.deecoder.test/static/images/DeeCoder_Technologies_icon.png",
+        )
+        self.assertEqual(len(organization_schema["sameAs"]), 3)
+        self.assertEqual(website_schema["@context"], "https://schema.org")
+        self.assertEqual(website_schema["name"], "DeeCoder Technologies")
+        self.assertEqual(website_schema["alternateName"], "DeeCoder")
+        self.assertEqual(website_schema["url"], "https://www.deecoder.test/")
+        self.assertEqual(
+            website_schema["publisher"]["@id"],
+            "https://www.deecoder.test/#organization",
+        )
+        self.assertEqual(
+            organization_schema["contactPoint"]["email"],
             "deecodertechnologiesworldwide@gmail.com",
         )
-        self.assertEqual(schema["contactPoint"]["telephone"], "+2348075346224")
-        self.assertNotIn("sameAs", schema)
-        self.assertNotIn("address", schema)
+        self.assertEqual(
+            organization_schema["contactPoint"]["telephone"], "+2348075346224"
+        )
+        self.assertNotIn("address", organization_schema)
+
+        self.assertEqual(
+            soup.h1.get_text(" ", strip=True),
+            "DeeCoder Technologies: Engineering the Digital Future",
+        )
+        self.assertIn(
+            "DeeCoder Technologies logo",
+            [image.get("alt") for image in soup.find_all("img")],
+        )
 
         for path, expected_heading in (
             ("/about", "About DeeCoder Technologies"),
@@ -147,6 +185,24 @@ class SearchEngineOptimizationTests(unittest.TestCase):
     def test_official_site_url_publishes_expected_absolute_sitemap_urls(self):
         official_origin = "https://deecodertechnologies.pythonanywhere.com"
         self.app.config["SITE_URL"] = official_origin
+
+        homepage = BeautifulSoup(self.client.get("/").data, "html.parser")
+        self.assertEqual(
+            homepage.find("link", rel="canonical")["href"],
+            f"{official_origin}/",
+        )
+        homepage_schemas = [
+            json.loads(script.string)
+            for script in homepage.find_all("script", type="application/ld+json")
+        ]
+        self.assertEqual(
+            next(schema for schema in homepage_schemas if schema["@type"] == "WebSite")["url"],
+            f"{official_origin}/",
+        )
+        self.assertEqual(
+            next(schema for schema in homepage_schemas if schema["@type"] == "Organization")["@id"],
+            f"{official_origin}/#organization",
+        )
 
         sitemap_response = self.client.get("/sitemap.xml")
         self.assertEqual(sitemap_response.status_code, 200)
@@ -257,7 +313,7 @@ class SearchEngineOptimizationTests(unittest.TestCase):
             "Welcome to DeeCoder Technologies, a digital technology business focused on website development, software solutions, educational platforms, and e-commerce systems.",
             "We help businesses, schools, entrepreneurs, and individuals establish and improve their digital presence through practical technology solutions designed around their needs.",
             "Our goal is to make technology useful, accessible, and effective by creating digital products that help our clients present their services, connect with their audiences, and manage their activities online.",
-            "DeeCoder Technologies was established around a simple idea: technology should help people solve real problems and create new opportunities.",
+            "DeeCoder Technologies was founded by Donatus Chukwu Paul around a simple idea: technology should help people solve real problems and create new opportunities.",
             "We focus on understanding the needs of our clients and developing digital solutions that align with their objectives. Whether a client needs a business website, a student portal, a school website, or an online shopping platform, we aim to provide a solution that is functional, professional, and easy to use.",
             "We believe that successful technology projects require more than writing code. They also require clear communication, thoughtful design, attention to detail, and an understanding of the people who will use the final product.",
             "We develop websites for businesses, schools, organizations, professionals, and individuals who want to establish or strengthen their online presence.",
@@ -285,6 +341,9 @@ class SearchEngineOptimizationTests(unittest.TestCase):
             re.sub(r"\s+", " ", paragraph.get_text("", strip=False)).strip()
             for paragraph in about.select("main p")
         ]
+        self.assertTrue(
+            any("Donatus Chukwu Paul" in paragraph for paragraph in actual_paragraphs)
+        )
         for paragraph in expected_paragraphs:
             with self.subTest(paragraph=paragraph):
                 self.assertIn(paragraph, actual_paragraphs)
