@@ -387,67 +387,102 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------------- Contact form — AJAX ----------------
-    const contactForm = document.getElementById('contactForm');
-    if (contactForm) {
-        const feedback = document.getElementById('contactFeedback');
-        const submissionToken = document.getElementById('contactSubmissionToken');
-        const createSubmissionToken = () => {
-            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
-                return window.crypto.randomUUID();
-            }
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
-                const random = Math.random() * 16 | 0;
-                return (character === 'x' ? random : (random & 0x3 | 0x8)).toString(16);
-            });
-        };
-        submissionToken.value = createSubmissionToken();
-        contactForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = contactForm.querySelector('button[type="submit"]');
-            const orig = btn.textContent;
-            btn.textContent = 'Sending...';
-            btn.disabled = true;
-            if (feedback) feedback.className = 'form-feedback';
+    // ---------------- Contact forms — shared AJAX endpoint ----------------
+    const createSubmissionToken = () => {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        if (!window.crypto || typeof window.crypto.getRandomValues !== 'function') {
+            throw new Error('Secure random values are unavailable.');
+        }
+        const bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0'));
+        return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+    };
 
+    document.querySelectorAll('.contact-form-shared').forEach(contactForm => {
+        const feedback = contactForm.querySelector('.form-feedback');
+        const button = contactForm.querySelector('button[type="submit"]');
+        const buttonLabel = contactForm.querySelector('.contact-submit-label');
+        const submissionToken = contactForm.elements.namedItem('submission_token');
+        let sending = false;
+
+        try {
+            submissionToken.value = createSubmissionToken();
+        } catch (error) {
+            button.disabled = true;
+            if (feedback) {
+                feedback.textContent = 'This form requires a secure browser connection. Please contact us by email or WhatsApp.';
+                feedback.classList.add('show', 'error');
+            }
+            return;
+        }
+
+        contactForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (sending || !contactForm.reportValidity()) return;
+            sending = true;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            buttonLabel.textContent = 'Sending...';
+            if (feedback) {
+                feedback.textContent = '';
+                feedback.className = 'form-feedback';
+            }
+            contactForm.querySelectorAll('[aria-invalid="true"]').forEach(field => {
+                field.removeAttribute('aria-invalid');
+            });
+
+            const values = new FormData(contactForm);
             const payload = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                subject: document.getElementById('service') ? document.getElementById('service').value : '',
-                message: document.getElementById('message').value,
-                contact_reference_code: document.getElementById('contactReferenceCode').value,
-                submission_token: submissionToken.value
+                name: values.get('name'),
+                email: values.get('email'),
+                phone: values.get('phone'),
+                subject: values.get('subject'),
+                message: values.get('message'),
+                contact_reference_code: values.get('contact_reference_code'),
+                submission_token: values.get('submission_token')
             };
 
             try {
-                const res = await fetch('/api/contact', {
+                const response = await fetch(contactForm.dataset.endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': values.get('csrf_token')
+                    },
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
-                const succeeded = res.ok && data.success;
+                const result = await response.json();
+                const succeeded = response.ok && result.success === true;
                 if (feedback) {
-                    feedback.textContent = data.message || 'Something went wrong. Please try again.';
+                    feedback.textContent = result.message || 'We could not submit your message. Please try again.';
                     feedback.classList.add('show', succeeded ? 'success' : 'error');
                 }
                 if (succeeded) {
-                    btn.textContent = 'Message Sent ✓';
+                    const nextSubmissionToken = createSubmissionToken();
                     contactForm.reset();
-                    submissionToken.value = createSubmissionToken();
-                } else {
-                    btn.textContent = orig;
+                    submissionToken.value = nextSubmissionToken;
+                } else if (result.errors) {
+                    Object.keys(result.errors).forEach(fieldName => {
+                        const field = contactForm.elements.namedItem(fieldName);
+                        if (field) field.setAttribute('aria-invalid', 'true');
+                    });
                 }
-            } catch (err) {
+            } catch (error) {
                 if (feedback) {
-                    feedback.textContent = 'Something went wrong. Please try again.';
+                    feedback.textContent = 'We could not connect to the server. Your entries are still here; please try again.';
                     feedback.classList.add('show', 'error');
                 }
-                btn.textContent = orig;
             } finally {
-                btn.disabled = false;
-                setTimeout(() => { btn.textContent = orig; }, 2500);
+                sending = false;
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                buttonLabel.textContent = 'Send Message';
             }
         });
-    }
+    });
 });

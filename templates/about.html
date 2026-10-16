@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}About DeeCoder Technologies | Official Website{% endblock %}
+{% block description %}Learn about DeeCoder Technologies, a digital technology business providing website development, educational platforms, e-commerce systems, software solutions, and technical support.{% endblock %}
+{% block structured_data %}
+{% if organization_schema %}
+<script type="application/ld+json">{{ organization_schema|tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block content %}
+<main class="content-detail-page">
+    <div class="container">
+        <header class="content-detail-heading">
+            <p class="detail-eyebrow">About us</p>
+            <h1>About DeeCoder Technologies</h1>
+        </header>
+
+        <section aria-labelledby="about-company">
+            <h2 id="about-company">Practical Digital Solutions for Businesses, Schools, and Individuals</h2>
+            <p>Welcome to <strong>DeeCoder Technologies</strong>, a digital technology business focused on website development, software solutions, educational platforms, and e-commerce systems.</p>
+            <p>We help businesses, schools, entrepreneurs, and individuals establish and improve their digital presence through practical technology solutions designed around their needs.</p>
+            <p>Our goal is to make technology useful, accessible, and effective by creating digital products that help our clients present their services, connect with their audiences, and manage their activities online.</p>
+        </section>
+
+        <section aria-labelledby="about-who-we-are">
+            <h2 id="about-who-we-are">Who We Are</h2>
+            <p>DeeCoder Technologies was established around a simple idea: technology should help people solve real problems and create new opportunities.</p>
+            <p>We focus on understanding the needs of our clients and developing digital solutions that align with their objectives. Whether a client needs a business website, a student portal, a school website, or an online shopping platform, we aim to provide a solution that is functional, professional, and easy to use.</p>
+            <p>We believe that successful technology projects require more than writing code. They also require clear communication, thoughtful design, attention to detail, and an understanding of the people who will use the final product.</p>
+        </section>
+
+        <section aria-labelledby="about-services">
+            <h2 id="about-services">Our Services</h2>
+            <h3>Website Development</h3>
+            <p>We develop websites for businesses, schools, organizations, professionals, and individuals who want to establish or strengthen their online presence.</p>
+            <h3>Student Portals and School Websites</h3>
+            <p>We provide digital solutions designed for educational environments, including student portals and school websites that support the presentation of school information and relevant online services.</p>
+            <h3>E-commerce Websites</h3>
+            <p>We build online shopping platforms that allow businesses to display products, present information, and serve customers through digital channels.</p>
+            <h3>Custom Software and Digital Products</h3>
+            <p>We work on digital products and software solutions intended to address specific needs. We also offer selected ready-made digital solutions for customers looking for practical starting points for their projects.</p>
+            <h3>Website Improvement and Technical Support</h3>
+            <p>We assist with website updates, functionality improvements, troubleshooting, and other technical requirements, depending on the project and agreed scope of work.</p>
+        </section>
+
+        <section aria-labelledby="about-mission">
+            <h2 id="about-mission">Our Mission</h2>
+            <p>Our mission is to deliver practical digital solutions that help businesses, educational institutions, entrepreneurs, and individuals use technology to work more effectively and grow their online presence.</p>
+        </section>
+
+        <section aria-labelledby="about-vision">
+            <h2 id="about-vision">Our Vision</h2>
+            <p>Our vision is to build a respected digital technology brand known for useful solutions, professional service, continuous learning, and responsible business practices.</p>
+        </section>
+
+        <section aria-labelledby="about-values">
+            <h2 id="about-values">Our Values</h2>
+            <p><strong>Quality:</strong> We aim to deliver solutions that meet agreed requirements and serve their intended purpose.</p>
+            <p><strong>Transparency:</strong> We value clear communication about project scope, pricing, timelines, and service expectations.</p>
+            <p><strong>Customer Focus:</strong> We seek to understand each customer's needs before recommending or developing a solution.</p>
+            <p><strong>Innovation:</strong> We continue exploring technologies and approaches that can improve the usefulness of our products and services.</p>
+            <p><strong>Responsibility:</strong> We recognize the importance of protecting customer information, communicating honestly, and handling business engagements professionally.</p>
+        </section>
+
+        <section aria-labelledby="about-academy">
+            <h2 id="about-academy">DeeCoder Academy</h2>
+            <p>DeeCoder Academy operates under DeeCoder Technologies as part of our interest in technology education and digital skills development. It supports our broader goal of helping people learn, develop practical knowledge, and engage with opportunities in the digital world.</p>
+        </section>
+
+        <section aria-labelledby="about-commitment">
+            <h2 id="about-commitment">Our Commitment to Customers</h2>
+            <p>At DeeCoder Technologies, we understand that choosing a technology provider requires confidence and clear information.</p>
+            <p>We aim to provide customers with understandable service descriptions, transparent project expectations, appropriate communication, and solutions aligned with the requirements agreed upon.</p>
+            <p>Before starting a project or purchasing a digital product, customers are encouraged to confirm the features included, pricing, delivery arrangements, support terms, and applicable conditions.</p>
+            <p>We also encourage customers to communicate with us through the official contact details published on this website to help ensure they are dealing with the correct business.</p>
+        </section>
+
+        <section aria-labelledby="about-work-together">
+            <h2 id="about-work-together">Let's Work Together</h2>
+            <p>Whether you are planning a new business website, need a student portal, want to launch an online store, or have another digital project in mind, DeeCoder Technologies welcomes your inquiry.</p>
+            <p>Tell us about your goals, and we can discuss your requirements and the available options.</p>
+            <p><strong>Contact us through our official <a href="{{ url_for('public.contact') }}">Contact page</a> or <a href="https://wa.me/2348075346224" rel="noopener noreferrer">WhatsApp channel</a> to get started.</strong></p>
+        </section>
+
+        <p><strong>DeeCoder Technologies — Innovative Solutions. Digital Growth. Your Success.</strong></p>
+    </div>
+</main>
+{% endblock %}

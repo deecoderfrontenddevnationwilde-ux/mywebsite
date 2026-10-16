@@ -1,22 +1,38 @@
 import os
 import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
 from werkzeug.datastructures import FileStorage
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import and_, case, or_
+from email_validator import EmailNotValidError, validate_email
 
 from extensions import db
-from models import AdminUser, ContactMessage, FeaturedProject, News, Product, ProductVideo, ServiceOffer, Subscriber
+from models import (
+    AdminUser,
+    ContactMessage,
+    ContactMessageActivity,
+    FeaturedProject,
+    News,
+    Product,
+    ProductVideo,
+    ServiceOffer,
+    Subscriber,
+)
 from auth import login_admin, logout_admin, login_required, get_current_admin
 from utils import delete_uploaded_file, make_unique_slug, save_uploaded_image, save_uploaded_video
 from services.email_service import (
     send_new_news_notification,
+    send_new_contact_notification,
+    send_contact_submission_confirmation,
     send_contact_approval_notification,
     send_contact_declined_notification,
+    send_contact_admin_reply,
 )
+from services.contact_workflow import attempt_contact_email, get_or_create_email_activity
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -70,10 +86,16 @@ def dashboard():
         "total_product_videos": ProductVideo.query.count(),
         "total_subscribers": Subscriber.query.filter_by(subscribed=True).count(),
         "pending_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_PENDING).count(),
-        "approved_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_APPROVED).count(),
-        "declined_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_DECLINED).count(),
+        "in_progress_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_IN_PROGRESS).count(),
+        "accepted_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_ACCEPTED).count(),
+        "rejected_messages": ContactMessage.query.filter_by(status=ContactMessage.STATUS_REJECTED).count(),
     }
-    recent_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(5).all()
+    recent_messages = (
+        ContactMessage.query.filter(ContactMessage.archived_at.is_(None))
+        .order_by(ContactMessage.created_at.desc())
+        .limit(5)
+        .all()
+    )
     return render_template("admin/dashboard.html", stats=stats, recent_messages=recent_messages)
 
 
@@ -933,22 +955,627 @@ def subscriber_delete(subscriber_id):
 
 # ------------------------------------------------------------ MESSAGES ----
 
+def _attempt_admin_message_email(message, activity):
+    senders = {
+        ContactMessageActivity.TYPE_BUSINESS_NOTIFICATION:
+            lambda: send_new_contact_notification(message),
+        ContactMessageActivity.TYPE_SUBMISSION_CONFIRMATION:
+            lambda: send_contact_submission_confirmation(message),
+        ContactMessageActivity.TYPE_ADMIN_REPLY:
+            lambda: send_contact_admin_reply(
+                message,
+                activity.body or "",
+                recipient_email=activity.recipient_email,
+                subject=activity.email_subject,
+            ),
+        ContactMessageActivity.TYPE_REQUEST_ACCEPTED:
+            lambda: send_contact_approval_notification(message),
+        ContactMessageActivity.TYPE_REQUEST_REJECTED:
+            lambda: send_contact_declined_notification(message),
+    }
+    sender = senders.get(activity.event_type)
+    if sender is None:
+        return False
+    accepted = attempt_contact_email(activity, sender)
+    if accepted:
+        if activity.event_type == ContactMessageActivity.TYPE_BUSINESS_NOTIFICATION:
+            message.notification_email_submitted = True
+        elif activity.event_type == ContactMessageActivity.TYPE_SUBMISSION_CONFIRMATION:
+            message.confirmation_email_submitted = True
+        elif activity.event_type in {
+            ContactMessageActivity.TYPE_REQUEST_ACCEPTED,
+            ContactMessageActivity.TYPE_REQUEST_REJECTED,
+        }:
+            message.decision_email_sent = True
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.error(
+                "Could not update contact message email flags (%s)", type(exc).__name__
+            )
+            return False
+    return accepted
+
+
+def _update_internal_note(message, raw_note):
+    note = (raw_note or "").strip()
+    if not note or note == (message.internal_note or ""):
+        return
+    message.internal_note = note
+    db.session.add(
+        ContactMessageActivity(
+            contact_message=message,
+            event_type=ContactMessageActivity.TYPE_NOTE_UPDATED,
+            body=note,
+            email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+            admin_username=get_current_admin().username,
+        )
+    )
+
+
 @admin_bp.route("/messages")
 @login_required
 def messages_index():
-    status_filter = request.args.get("status", ContactMessage.STATUS_PENDING)
+    folder = (request.args.get("folder") or "").lower()
+    if folder not in {"all", "inbox", "archive", "trash"}:
+        folder = "archive" if request.args.get("archived") == "1" else "inbox"
+    tab = (request.args.get("tab") or "all").lower()
+    if tab not in {
+        "all", "new", "read", "replied", "pending", "approved", "declined",
+    }:
+        tab = "all"
+    status_filter = (request.args.get("status") or "ALL").upper()
+    if status_filter == "APPROVED":
+        status_filter = ContactMessage.STATUS_ACCEPTED
+    elif status_filter == "DECLINED":
+        status_filter = ContactMessage.STATUS_REJECTED
+    read_filter = (request.args.get("read") or "all").lower()
+    if read_filter not in {"all", "read", "unread"}:
+        read_filter = "all"
+    if status_filter not in {
+        "ALL", ContactMessage.STATUS_PENDING, ContactMessage.STATUS_IN_PROGRESS,
+        ContactMessage.STATUS_ACCEPTED, ContactMessage.STATUS_REJECTED,
+    }:
+        status_filter = "ALL"
+    priority_filter = (request.args.get("priority") or "all").upper()
+    if priority_filter not in {"ALL", "LOW", "NORMAL", "HIGH", "URGENT"}:
+        priority_filter = "ALL"
+    search = (request.args.get("q") or "").strip()[:200]
+    sort_order = (request.args.get("sort") or "newest").lower()
     query = ContactMessage.query
-    if status_filter in (ContactMessage.STATUS_PENDING, ContactMessage.STATUS_APPROVED, ContactMessage.STATUS_DECLINED):
+    if folder == "trash":
+        query = query.filter(ContactMessage.deleted_at.is_not(None))
+    else:
+        query = query.filter(ContactMessage.deleted_at.is_(None))
+        if folder == "archive":
+            query = query.filter(ContactMessage.archived_at.is_not(None))
+        elif folder == "inbox":
+            query = query.filter(ContactMessage.archived_at.is_(None))
+
+    reply_exists = ContactMessage.activities.any(
+        and_(
+            ContactMessageActivity.event_type == ContactMessageActivity.TYPE_ADMIN_REPLY,
+            ContactMessageActivity.email_status == ContactMessageActivity.EMAIL_ACCEPTED,
+        )
+    )
+    if folder != "trash":
+        tab_filters = {
+            "new": ContactMessage.is_read.is_(False),
+            "read": ContactMessage.is_read.is_(True),
+            "replied": reply_exists,
+            "pending": ContactMessage.status == ContactMessage.STATUS_PENDING,
+            "approved": ContactMessage.status == ContactMessage.STATUS_ACCEPTED,
+            "declined": ContactMessage.status == ContactMessage.STATUS_REJECTED,
+        }
+        if tab in tab_filters:
+            query = query.filter(tab_filters[tab])
+
+    if tab == "all" and status_filter in (
+        ContactMessage.STATUS_PENDING,
+        ContactMessage.STATUS_IN_PROGRESS,
+        ContactMessage.STATUS_ACCEPTED,
+        ContactMessage.STATUS_REJECTED,
+    ):
         query = query.filter_by(status=status_filter)
-    messages = query.order_by(ContactMessage.created_at.desc()).all()
-    return render_template("admin/messages_list.html", messages=messages, status_filter=status_filter)
+    if tab == "all" and read_filter == "read":
+        query = query.filter_by(is_read=True)
+    elif tab == "all" and read_filter == "unread":
+        query = query.filter_by(is_read=False)
+    if search:
+        term = f"%{search}%"
+        query = query.filter(
+            or_(
+                ContactMessage.name.ilike(term),
+                ContactMessage.email.ilike(term),
+                ContactMessage.subject.ilike(term),
+                ContactMessage.message.ilike(term),
+            )
+        )
+    if priority_filter != "ALL":
+        query = query.filter_by(priority=priority_filter)
+
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    parsed_from = None
+    parsed_to = None
+    try:
+        parsed_from = date.fromisoformat(date_from) if date_from else None
+        parsed_to = date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        flash("Enter valid dates for the message filter.", "error")
+        date_from = ""
+        date_to = ""
+        parsed_from = None
+        parsed_to = None
+    if parsed_from and parsed_to and parsed_from > parsed_to:
+        flash("The start date must be on or before the end date.", "error")
+        parsed_from = parsed_to = None
+        date_from = date_to = ""
+    if parsed_from:
+        query = query.filter(
+            ContactMessage.created_at >= datetime.combine(parsed_from, time.min)
+        )
+    if parsed_to:
+        query = query.filter(
+            ContactMessage.created_at < datetime.combine(parsed_to + timedelta(days=1), time.min)
+        )
+    if sort_order == "oldest":
+        order = ContactMessage.created_at.asc()
+    elif sort_order == "priority":
+        order = case(
+            (ContactMessage.priority == "URGENT", 0),
+            (ContactMessage.priority == "HIGH", 1),
+            (ContactMessage.priority == "NORMAL", 2),
+            else_=3,
+        )
+    else:
+        sort_order = "newest"
+        order = ContactMessage.created_at.desc()
+    page_number = request.args.get("page", 1, type=int)
+    pagination = query.order_by(order, ContactMessage.id.desc()).paginate(
+        page=max(page_number or 1, 1), per_page=20, error_out=False
+    )
+    filters = {
+        "status": status_filter,
+        "read": read_filter,
+        "archived": folder == "archive",
+        "q": search,
+        "sort": sort_order,
+        "date_from": date_from,
+        "date_to": date_to,
+        "priority": priority_filter,
+        "folder": folder,
+        "tab": tab,
+    }
+    stats_query = ContactMessage.query.filter(ContactMessage.deleted_at.is_(None))
+    stats = {
+        "total": stats_query.count(),
+        "new": stats_query.filter(ContactMessage.is_read.is_(False)).count(),
+        "read": stats_query.filter(ContactMessage.is_read.is_(True)).count(),
+        "replied": stats_query.filter(reply_exists).count(),
+        "approved": stats_query.filter_by(status=ContactMessage.STATUS_ACCEPTED).count(),
+        "declined": stats_query.filter_by(status=ContactMessage.STATUS_REJECTED).count(),
+        "pending": stats_query.filter_by(status=ContactMessage.STATUS_PENDING).count(),
+        "archived": stats_query.filter(ContactMessage.archived_at.is_not(None)).count(),
+        "trash": ContactMessage.query.filter(ContactMessage.deleted_at.is_not(None)).count(),
+    }
+    page_message_ids = [message.id for message in pagination.items]
+    replied_ids = set()
+    if page_message_ids:
+        replied_ids = {
+            message_id for (message_id,) in db.session.query(
+                ContactMessageActivity.contact_message_id
+            ).filter(
+                ContactMessageActivity.contact_message_id.in_(page_message_ids),
+                ContactMessageActivity.event_type == ContactMessageActivity.TYPE_ADMIN_REPLY,
+                ContactMessageActivity.email_status == ContactMessageActivity.EMAIL_ACCEPTED,
+            ).distinct()
+        }
+    return render_template(
+        "admin/messages_list.html",
+        messages=pagination.items,
+        pagination=pagination,
+        status_filter=status_filter,
+        filters=filters,
+        folder=folder,
+        tab=tab,
+        stats=stats,
+        replied_ids=replied_ids,
+    )
 
 
 @admin_bp.route("/messages/<int:message_id>")
 @login_required
 def message_detail(message_id):
     message = ContactMessage.query.get_or_404(message_id)
-    return render_template("admin/message_detail.html", message=message)
+    if not message.is_read:
+        message.is_read = True
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_STATUS_CHANGED,
+                body="Marked as read",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+    return render_template(
+        "admin/message_detail.html",
+        message=message,
+        activities=message.activities,
+        reply_token=str(uuid.uuid4()),
+        accept_token=str(uuid.uuid4()),
+        reject_token=str(uuid.uuid4()),
+    )
+
+
+@admin_bp.route("/messages/<int:message_id>/read", methods=["POST"])
+@login_required
+def message_set_read(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    is_read = request.form.get("is_read") == "1"
+    if message.is_read != is_read:
+        message.is_read = is_read
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_STATUS_CHANGED,
+                body="Marked as read" if is_read else "Marked as unread",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+    db.session.commit()
+    flash("Message marked as read." if message.is_read else "Message marked as unread.", "success")
+    if not message.is_read:
+        return redirect(url_for("admin.messages_index", archived="1" if message.archived_at else None))
+    return redirect(url_for("admin.message_detail", message_id=message.id))
+
+
+@admin_bp.route("/messages/<int:message_id>/status", methods=["POST"])
+@login_required
+def message_set_work_status(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    new_status = (request.form.get("status") or "").upper()
+    allowed_statuses = {
+        ContactMessage.STATUS_PENDING,
+        ContactMessage.STATUS_IN_PROGRESS,
+    }
+    if new_status not in allowed_statuses:
+        flash("Select a valid message workflow status.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if message.status not in allowed_statuses:
+        flash("A decided request cannot be moved back into the active workflow.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if message.status != new_status:
+        previous_status = message.status
+        message.status = new_status
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_STATUS_CHANGED,
+                body=f"Request status changed from {previous_status.replace('_', ' ').title()} to {new_status.replace('_', ' ').title()}",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+    flash("Message workflow status updated.", "success")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
+
+
+@admin_bp.route("/messages/<int:message_id>/archive", methods=["POST"])
+@login_required
+def message_archive(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    archive = request.form.get("archived") == "1"
+    if message.deleted_at:
+        flash("Restore this message from Trash before archiving it.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if archive != (message.archived_at is not None):
+        message.archived_at = datetime.now(timezone.utc) if archive else None
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=(
+                    ContactMessageActivity.TYPE_ARCHIVED if archive
+                    else ContactMessageActivity.TYPE_RESTORED
+                ),
+                body="Message archived" if archive else "Message restored to inbox",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+    db.session.commit()
+    flash("Message archived." if archive else "Message restored to the inbox.", "success")
+    return redirect(
+        url_for("admin.messages_index", archived="1") if archive
+        else url_for("admin.messages_index")
+    )
+
+
+@admin_bp.route("/messages/<int:message_id>/trash", methods=["POST"])
+@login_required
+def message_trash(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    if message.deleted_at is None:
+        message.deleted_at = datetime.now(timezone.utc)
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_TRASHED,
+                body="Message moved to Trash",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+        flash("Message moved to Trash. You can restore it before permanent deletion.", "success")
+    return redirect(url_for("admin.messages_index", folder="trash"))
+
+
+@admin_bp.route("/messages/<int:message_id>/restore", methods=["POST"])
+@login_required
+def message_restore(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    if message.deleted_at is None:
+        flash("This message is not in Trash.", "error")
+    else:
+        message.deleted_at = None
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_RESTORED,
+                body="Message restored from Trash",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+        flash("Message restored.", "success")
+    return redirect(url_for("admin.messages_index", folder="trash"))
+
+
+@admin_bp.route("/messages/<int:message_id>/delete-permanently", methods=["POST"])
+@login_required
+def message_delete_permanently(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    if message.deleted_at is None:
+        flash("Move the message to Trash before permanently deleting it.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    db.session.delete(message)
+    db.session.commit()
+    flash("Message permanently deleted.", "success")
+    return redirect(url_for("admin.messages_index", folder="trash"))
+
+
+@admin_bp.route("/messages/bulk", methods=["POST"])
+@login_required
+def messages_bulk_action():
+    raw_ids = request.form.getlist("message_ids")
+    action = (request.form.get("action") or "").strip().lower()
+    folder = (request.form.get("folder") or "inbox").lower()
+    tab = (request.form.get("tab") or "all").lower()
+    if folder not in {"all", "inbox", "archive", "trash"}:
+        folder = "inbox"
+    if tab not in {"all", "new", "read", "replied", "pending", "approved", "declined"}:
+        tab = "all"
+    list_url = url_for("admin.messages_index", folder=folder, tab=tab)
+    if not raw_ids or len(raw_ids) > 100:
+        flash("Select between 1 and 100 messages for a bulk action.", "error")
+        return redirect(list_url)
+    try:
+        message_ids = {int(value) for value in raw_ids}
+    except (TypeError, ValueError):
+        flash("The selected message list is invalid.", "error")
+        return redirect(list_url)
+    if len(message_ids) != len(raw_ids):
+        flash("The selected message list contains duplicates.", "error")
+        return redirect(list_url)
+
+    selected = ContactMessage.query.filter(ContactMessage.id.in_(message_ids)).all()
+    if len(selected) != len(message_ids):
+        flash("One or more selected messages could not be found. No changes were made.", "error")
+        return redirect(list_url)
+
+    now = datetime.now(timezone.utc)
+    admin_name = get_current_admin().username
+    activity_messages = []
+    if action == "archive" and all(m.deleted_at is None for m in selected):
+        for message in selected:
+            if message.archived_at is None:
+                message.archived_at = now
+                activity_messages.append((message, ContactMessageActivity.TYPE_ARCHIVED, "Bulk archived"))
+    elif action == "restore_archive" and all(
+        m.deleted_at is None and m.archived_at is not None for m in selected
+    ):
+        for message in selected:
+            message.archived_at = None
+            activity_messages.append((message, ContactMessageActivity.TYPE_RESTORED, "Restored to inbox"))
+    elif action == "trash" and all(m.deleted_at is None for m in selected):
+        for message in selected:
+            message.deleted_at = now
+            activity_messages.append((message, ContactMessageActivity.TYPE_TRASHED, "Bulk moved to Trash"))
+    elif action == "restore_trash" and all(m.deleted_at is not None for m in selected):
+        for message in selected:
+            message.deleted_at = None
+            activity_messages.append((message, ContactMessageActivity.TYPE_RESTORED, "Restored from Trash"))
+    elif action == "delete_permanently" and all(m.deleted_at is not None for m in selected):
+        for message in selected:
+            db.session.delete(message)
+    elif action in {"read", "unread"} and all(m.deleted_at is None for m in selected):
+        value = action == "read"
+        for message in selected:
+            if message.is_read != value:
+                message.is_read = value
+                activity_messages.append(
+                    (message, ContactMessageActivity.TYPE_STATUS_CHANGED,
+                     "Marked as read" if value else "Marked as unread")
+                )
+    elif action in {"approve", "decline"} and all(m.deleted_at is None for m in selected):
+        new_status = (
+            ContactMessage.STATUS_ACCEPTED if action == "approve"
+            else ContactMessage.STATUS_REJECTED
+        )
+        for message in selected:
+            if message.status != new_status:
+                previous_status = message.status
+                message.status = new_status
+                message.reviewed_at = now
+                activity_messages.append(
+                    (
+                        message,
+                        ContactMessageActivity.TYPE_STATUS_CHANGED,
+                        f"Bulk decision changed from {previous_status.replace('_', ' ').title()} "
+                        f"to {new_status.replace('_', ' ').title()}; no email was sent",
+                    )
+                )
+    else:
+        flash("That action is not valid for the selected messages. No changes were made.", "error")
+        return redirect(list_url)
+
+    for message, event_type, body in activity_messages:
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=event_type,
+                body=body,
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=admin_name,
+            )
+        )
+    db.session.commit()
+    if action == "delete_permanently":
+        flash(f"Permanently deleted {len(selected)} message(s).", "success")
+    elif action in {"approve", "decline"}:
+        flash(f"Updated {len(selected)} message(s). No decision emails were sent.", "success")
+    else:
+        flash(f"Updated {len(selected)} message(s).", "success")
+    return redirect(list_url)
+
+
+@admin_bp.route("/messages/<int:message_id>/priority", methods=["POST"])
+@login_required
+def message_set_priority(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    priority = (request.form.get("priority") or "").upper()
+    if priority not in {"LOW", "NORMAL", "HIGH", "URGENT"}:
+        flash("Choose a valid priority.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if message.priority != priority:
+        previous = message.priority
+        message.priority = priority
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_PRIORITY_CHANGED,
+                body=f"Priority changed from {previous.title()} to {priority.title()}",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+    flash("Message priority updated.", "success")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
+
+
+@admin_bp.route("/messages/<int:message_id>/note", methods=["POST"])
+@login_required
+def message_save_internal_note(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    note = (request.form.get("internal_note") or "").strip()
+    if len(note) > 10000:
+        flash("Internal notes must be 10,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if note != (message.internal_note or ""):
+        message.internal_note = note or None
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_NOTE_UPDATED,
+                body=note or "Internal note cleared",
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+        db.session.commit()
+    flash("Internal note saved.", "success")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
+
+
+@admin_bp.route("/messages/<int:message_id>/reply", methods=["POST"])
+@login_required
+def message_reply(message_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    reply_text = (request.form.get("reply") or "").strip()
+    recipient = (request.form.get("recipient_email") or message.email).strip()
+    email_subject = (request.form.get("email_subject") or "").strip()
+    token = (request.form.get("request_token") or "").strip()
+    if not reply_text or len(reply_text) > 10000:
+        flash("Reply text is required and must be 10,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if len(email_subject) > 200 or "\r" in email_subject or "\n" in email_subject:
+        flash("The email subject must be 200 characters or fewer and cannot contain line breaks.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    try:
+        recipient = validate_email(recipient, check_deliverability=False).normalized
+    except (EmailNotValidError, TypeError):
+        flash("Enter a valid reply recipient email address.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if not email_subject:
+        flash("An email subject is required.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    try:
+        uuid.UUID(token)
+    except (ValueError, AttributeError):
+        flash("The reply form expired. Please try again.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+
+    activity = get_or_create_email_activity(
+        message,
+        ContactMessageActivity.TYPE_ADMIN_REPLY,
+        body=reply_text,
+        recipient_email=recipient,
+        email_subject=email_subject,
+        request_token=token,
+        admin_username=get_current_admin().username,
+    )
+    if (
+        activity.contact_message_id != message.id
+        or activity.event_type != ContactMessageActivity.TYPE_ADMIN_REPLY
+        or activity.body != reply_text
+        or activity.recipient_email != recipient
+        or activity.email_subject != email_subject
+    ):
+        flash("This reply request token has already been used.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if _attempt_admin_message_email(message, activity):
+        flash("Reply accepted by the email service. Inbox delivery is not confirmed.", "success")
+    else:
+        flash("Reply was saved, but the email service did not accept it. Retry the saved reply below.", "error")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
+
+
+@admin_bp.route("/messages/<int:message_id>/activities/<int:activity_id>/retry", methods=["POST"])
+@login_required
+def message_email_retry(message_id, activity_id):
+    message = ContactMessage.query.get_or_404(message_id)
+    activity = ContactMessageActivity.query.filter_by(
+        id=activity_id,
+        contact_message_id=message.id,
+    ).first_or_404()
+    if activity.email_status not in (
+        ContactMessageActivity.EMAIL_FAILED,
+        ContactMessageActivity.EMAIL_SENDING,
+    ):
+        flash("Only failed or interrupted email attempts can be retried.", "error")
+    elif _attempt_admin_message_email(message, activity):
+        flash("Email submission was accepted by the email service; delivery is not confirmed.", "success")
+    else:
+        flash("Email retry failed. The email service did not accept the message.", "error")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
 
 
 @admin_bp.route("/messages/<int:message_id>/approve", methods=["POST"])
@@ -956,23 +1583,67 @@ def message_detail(message_id):
 def message_approve(message_id):
     message = ContactMessage.query.get_or_404(message_id)
     admin_note = (request.form.get("admin_note") or "").strip()
+    internal_note = request.form.get("internal_note")
+    token = (request.form.get("request_token") or "").strip()
+    if len(admin_note) > 5000:
+        flash("The optional message must be 5,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if internal_note is not None and len(internal_note.strip()) > 10000:
+        flash("Internal notes must be 10,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    _update_internal_note(message, internal_note)
+    previous_status = message.status
+    if not token:
+        flash("The decision form expired. Please try again.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if token:
+        try:
+            uuid.UUID(token)
+        except ValueError:
+            flash("The decision form expired. Please try again.", "error")
+            return redirect(url_for("admin.message_detail", message_id=message.id))
+        existing = ContactMessageActivity.query.filter_by(request_token=token).first()
+        if existing and (
+            existing.contact_message_id != message.id
+            or existing.event_type != ContactMessageActivity.TYPE_REQUEST_ACCEPTED
+        ):
+            flash("This decision form has already been used.", "error")
+            return redirect(url_for("admin.message_detail", message_id=message.id))
 
-    already_decided = message.status == ContactMessage.STATUS_APPROVED
-
-    message.status = ContactMessage.STATUS_APPROVED
-    if admin_note:
-        message.admin_note = admin_note
-    message.reviewed_at = datetime.now(timezone.utc)
+    if message.status != ContactMessage.STATUS_ACCEPTED:
+        message.status = ContactMessage.STATUS_ACCEPTED
+        message.admin_note = admin_note or None
+        message.reviewed_at = datetime.now(timezone.utc)
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_STATUS_CHANGED,
+                body=(
+                    f"Request status changed from {previous_status.replace('_', ' ').title()} "
+                    "to Accepted"
+                ),
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+    activity = get_or_create_email_activity(
+        message,
+        ContactMessageActivity.TYPE_REQUEST_ACCEPTED,
+        body=admin_note or None,
+        request_token=token or None,
+        admin_username=get_current_admin().username,
+    )
     db.session.commit()
-
-    # Guard against duplicate emails if the admin clicks the button repeatedly.
-    if not already_decided and not message.decision_email_sent:
-        if send_contact_approval_notification(message):
-            message.decision_email_sent = True
-            db.session.commit()
-
-    flash("Message approved.", "success")
-    return redirect(url_for("admin.messages_index"))
+    if (
+        activity.contact_message_id != message.id
+        or activity.event_type != ContactMessageActivity.TYPE_REQUEST_ACCEPTED
+    ):
+        flash("This decision form has already been used.", "error")
+    elif _attempt_admin_message_email(message, activity):
+        flash("Request accepted and acceptance email submission was accepted by the email service.", "success")
+    else:
+        flash("Request accepted, but the email was not accepted. Retry it from the message history.", "error")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
 
 
 @admin_bp.route("/messages/<int:message_id>/decline", methods=["POST"])
@@ -980,22 +1651,67 @@ def message_approve(message_id):
 def message_decline(message_id):
     message = ContactMessage.query.get_or_404(message_id)
     admin_note = (request.form.get("admin_note") or "").strip()
+    internal_note = request.form.get("internal_note")
+    token = (request.form.get("request_token") or "").strip()
+    if len(admin_note) > 5000:
+        flash("The optional explanation must be 5,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if internal_note is not None and len(internal_note.strip()) > 10000:
+        flash("Internal notes must be 10,000 characters or fewer.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    _update_internal_note(message, internal_note)
+    previous_status = message.status
+    if not token:
+        flash("The decision form expired. Please try again.", "error")
+        return redirect(url_for("admin.message_detail", message_id=message.id))
+    if token:
+        try:
+            uuid.UUID(token)
+        except ValueError:
+            flash("The decision form expired. Please try again.", "error")
+            return redirect(url_for("admin.message_detail", message_id=message.id))
+        existing = ContactMessageActivity.query.filter_by(request_token=token).first()
+        if existing and (
+            existing.contact_message_id != message.id
+            or existing.event_type != ContactMessageActivity.TYPE_REQUEST_REJECTED
+        ):
+            flash("This decision form has already been used.", "error")
+            return redirect(url_for("admin.message_detail", message_id=message.id))
 
-    already_decided = message.status == ContactMessage.STATUS_DECLINED
-
-    message.status = ContactMessage.STATUS_DECLINED
-    if admin_note:
-        message.admin_note = admin_note
-    message.reviewed_at = datetime.now(timezone.utc)
+    if message.status != ContactMessage.STATUS_REJECTED:
+        message.status = ContactMessage.STATUS_REJECTED
+        message.admin_note = admin_note or None
+        message.reviewed_at = datetime.now(timezone.utc)
+        db.session.add(
+            ContactMessageActivity(
+                contact_message=message,
+                event_type=ContactMessageActivity.TYPE_STATUS_CHANGED,
+                body=(
+                    f"Request status changed from {previous_status.replace('_', ' ').title()} "
+                    "to Declined"
+                ),
+                email_status=ContactMessageActivity.EMAIL_NOT_APPLICABLE,
+                admin_username=get_current_admin().username,
+            )
+        )
+    activity = get_or_create_email_activity(
+        message,
+        ContactMessageActivity.TYPE_REQUEST_REJECTED,
+        body=admin_note or None,
+        request_token=token or None,
+        admin_username=get_current_admin().username,
+    )
     db.session.commit()
-
-    if not already_decided and not message.decision_email_sent:
-        if send_contact_declined_notification(message):
-            message.decision_email_sent = True
-            db.session.commit()
-
-    flash("Message declined.", "success")
-    return redirect(url_for("admin.messages_index"))
+    if (
+        activity.contact_message_id != message.id
+        or activity.event_type != ContactMessageActivity.TYPE_REQUEST_REJECTED
+    ):
+        flash("This decision form has already been used.", "error")
+    elif _attempt_admin_message_email(message, activity):
+        flash("Request rejected and notification email submission was accepted by the email service.", "success")
+    else:
+        flash("Request rejected, but the email was not accepted. Retry it from the message history.", "error")
+    return redirect(url_for("admin.message_detail", message_id=message.id))
 
 
 # ------------------------------------------------------------- SETTINGS ----

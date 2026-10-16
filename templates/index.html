@@ -1,4 +1,11 @@
 {% extends "base.html" %}
+{% block title %}DeeCoder Technologies | Official Website{% endblock %}
+{% block description %}DeeCoder Technologies builds responsive websites, web applications, and secure digital products, and provides software development and cybersecurity services.{% endblock %}
+{% block structured_data %}
+{% if organization_schema %}
+<script type="application/ld+json">{{ organization_schema|tojson }}</script>
+{% endif %}
+{% endblock %}
 {% block content %}
 
     <!-- HERO -->
@@ -7,7 +14,7 @@
             <div class="hero-grid">
                 <div>
                     <span class="hero-badge">✨ Front-End Developer · Clean Code · Beautiful Design</span>
-                    <h1>Engineering The <em>Digital Future</em></h1>
+                    <h1>DeeCoder Technologies: <em>Engineering the Digital Future</em></h1>
                     <p>I build modern, responsive websites and web apps with clean code and thoughtful design — from landing pages and e-commerce to full product interfaces. Let’s turn your ideas into something people love to use.</p>
                     <div class="hero-actions">
                         <a href="#projects" class="btn btn-primary">View Our Work →</a>
@@ -16,7 +23,7 @@
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="DeeCoder Technologies">
+                    <img src="{{ url_for('static', filename='images/DeeCoder_Technologies_icon.png') }}" alt="DeeCoder Technologies">
                 </div>
             </div>
         </div>
@@ -119,13 +126,13 @@
                     <span class="mv-icon">🎯</span>
                     <h3>Mission Statement</h3>
                     <p class="tag">To build, secure, and empower.</p>
-                    <p>Our mission is to deliver cutting-edge software development integrated with defense-grade cybersecurity solutions—helping businesses innovate rapidly without compromising safety, performance, or user trust.</p>
+                    <p>Our mission is to deliver practical digital solutions that help businesses, educational institutions, entrepreneurs, and individuals use technology to work more effectively and grow their online presence.</p>
                 </div>
                 <div class="mv-card reveal">
                     <span class="mv-icon">👁️</span>
                     <h3>Vision Statement</h3>
                     <p class="tag">To redefine how modern tech is built.</p>
-                    <p>We envision a digital landscape where secure coding is the standard, not an afterthought. We aim to be the premier technology partner for organizations seeking scalable digital products backed by impenetrable digital defense.</p>
+                    <p>Our vision is to build a respected digital technology brand known for useful solutions, professional service, continuous learning, and responsible business practices.</p>
                 </div>
             </div>
             <div class="section-head" style="margin-bottom:2rem">
@@ -651,37 +658,8 @@
                         <span>Mon–Fri · Typical reply under 24h</span>
                     </div>
                 </div>
-                <form class="contact-form reveal" id="contactForm">
-                    <input type="hidden" id="contactSubmissionToken" name="submission_token">
-                    <input type="text" id="contactReferenceCode" name="contact_reference_code" hidden tabindex="-1" autocomplete="off" aria-hidden="true">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="name">Name</label>
-                            <input type="text" id="name" name="name" maxlength="150" required placeholder="Your name">
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" maxlength="254" required placeholder="you@company.com">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="service">Service of interest</label>
-                        <select id="service" name="service">
-                            <option value="">Select a service</option>
-                            <option>Web Development</option>
-                            <option>Cyber Security</option>
-                            <option>UI/UX Design</option>
-                            <option>Code Review</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="message">Message</label>
-                        <textarea id="message" name="message" maxlength="5000" required placeholder="Tell us about your project..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%">Send Message</button>
-                    <div class="form-feedback" id="contactFeedback"></div>
-                </form>
+                {% set form_id = "homepage-contact-form" %}
+                {% include "contact_form.html" %}
             </div>
         </div>
     </section>

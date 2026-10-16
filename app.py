@@ -1,10 +1,11 @@
 import os
 import tempfile
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 import click
 from dotenv import load_dotenv
-from flask import Flask, Request as FlaskRequest, current_app, jsonify, render_template, request
+from flask import Flask, Request as FlaskRequest, current_app, jsonify, make_response, render_template, request, url_for
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 
@@ -12,6 +13,35 @@ load_dotenv()  # reads .env into environment variables before Config is built
 
 from config import Config, normalize_database_uri
 from extensions import db, migrate, csrf
+
+
+def seo_site_url(site_url):
+    """Return the configured HTTPS origin only when it is suitable for indexing."""
+    if not site_url:
+        return None
+
+    try:
+        parsed = urlsplit(site_url.strip())
+    except ValueError:
+        return None
+    hostname = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme.lower() != "https"
+        or not hostname
+        or "." not in hostname
+        or parsed.username
+        or parsed.password
+        or parsed.path not in ("", "/")
+        or parsed.query
+        or parsed.fragment
+        or hostname in {"localhost", "example.com", "example.net", "example.org"}
+        or hostname.endswith(".example")
+        or "your_" in hostname
+        or "your-" in hostname
+    ):
+        return None
+
+    return f"https://{parsed.netloc}"
 
 
 class UploadAwareRequest(FlaskRequest):
@@ -63,6 +93,7 @@ def create_app(config_class=Config):
     from models import (  # noqa: F401
         AdminUser,
         ContactMessage,
+        ContactMessageActivity,
         FeaturedProject,
         News,
         Product,
@@ -105,10 +136,84 @@ def create_app(config_class=Config):
         app.logger.exception("Unhandled server error")
         return render_template("500.html"), 500
 
+    @app.route("/robots.txt")
+    def robots_txt():
+        site_url = seo_site_url(app.config.get("SITE_URL"))
+        lines = [
+            "User-agent: *",
+            "Allow: /",
+            "Disallow: /admin/",
+            "Disallow: /api/",
+            "Disallow: /unsubscribe/",
+            "Disallow: /uploads/",
+        ]
+        if site_url:
+            lines.append(f"Sitemap: {site_url}/sitemap.xml")
+        response = make_response("\n".join(lines) + "\n")
+        response.mimetype = "text/plain"
+        return response
+
+    @app.route("/sitemap.xml")
+    def sitemap_xml():
+        site_url = seo_site_url(app.config.get("SITE_URL"))
+        if not site_url:
+            return "Configure SITE_URL with the official HTTPS domain to publish a sitemap.\n", 503
+
+        pages = [
+            ("/", None),
+            ("/about", None),
+            ("/contact", None),
+            ("/news", None),
+            ("/projects", None),
+            ("/products", None),
+            ("/videos", None),
+            ("/terms", None),
+            ("/privacy", None),
+        ]
+        from models import News, Product
+
+        for article in News.query.filter_by(published=True).order_by(News.slug).all():
+            modified = article.updated_at or article.published_at or article.created_at
+            path = url_for("public.news_detail", slug=article.slug)
+            pages.append((path, modified.date().isoformat() if modified else None))
+        for product in Product.query.filter_by(published=True).order_by(Product.slug).all():
+            modified = product.updated_at or product.published_at or product.created_at
+            path = url_for("public.product_detail", slug=product.slug)
+            pages.append((path, modified.date().isoformat() if modified else None))
+
+        sitemap_entries = [
+            {"loc": f"{site_url}{path}", "lastmod": lastmod}
+            for path, lastmod in pages
+        ]
+        return render_template("sitemap.xml", sitemap_entries=sitemap_entries), 200, {
+            "Content-Type": "application/xml; charset=utf-8"
+        }
+
     @app.context_processor
     def inject_globals():
+        site_url = seo_site_url(app.config.get("SITE_URL"))
+        canonical_url = f"{site_url}{request.path}" if site_url else None
         return {
             "company_name": app.config.get("COMPANY_NAME"),
+            "seo_site_url": site_url,
+            "canonical_url": canonical_url,
+            "organization_schema": {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "DeeCoder Technologies",
+                "url": site_url,
+                "description": (
+                    "DeeCoder Technologies builds web applications, responsive "
+                    "interfaces, and software solutions with a focus on secure, "
+                    "reliable digital experiences."
+                ),
+                "contactPoint": {
+                    "@type": "ContactPoint",
+                    "contactType": "customer support",
+                    "email": "deecodertechnologiesworldwide@gmail.com",
+                    "telephone": "+2348075346224",
+                },
+            } if site_url else None,
         }
 
     return app

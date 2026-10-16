@@ -81,7 +81,7 @@ class AdminContentManagementTests(unittest.TestCase):
                     self.assertIn(marker, response.data)
                 self.assertIn(b"data-content-upload-progress", response.data)
                 self.assertIn(b"Ready to save", response.data)
-                self.assertIn(b"admin.css?v=20261010-content-management", response.data)
+                self.assertIn(b"admin.css?v=20261016-message-center-v2", response.data)
                 self.assertIn(b"admin.js?v=20261010-content-management", response.data)
 
         for route in ("/admin/projects", "/admin/products", "/admin/news"):

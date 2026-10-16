@@ -11,8 +11,9 @@
     <div class="admin-stat-card"><div class="value">{{ stats.total_product_videos }}</div><div class="label">Product Videos</div><a href="{{ url_for('admin.videos_index') }}" class="admin-stat-link">Manage videos</a></div>
     <div class="admin-stat-card"><div class="value">{{ stats.total_subscribers }}</div><div class="label">Active Subscribers</div></div>
     <div class="admin-stat-card"><div class="value">{{ stats.pending_messages }}</div><div class="label">Pending Messages</div></div>
-    <div class="admin-stat-card"><div class="value">{{ stats.approved_messages }}</div><div class="label">Approved Messages</div></div>
-    <div class="admin-stat-card"><div class="value">{{ stats.declined_messages }}</div><div class="label">Declined Messages</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.in_progress_messages }}</div><div class="label">Requests In Progress</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.accepted_messages }}</div><div class="label">Accepted Requests</div></div>
+    <div class="admin-stat-card"><div class="value">{{ stats.rejected_messages }}</div><div class="label">Rejected Requests</div></div>
 </div>
 
 <div class="admin-panel">
@@ -25,7 +26,7 @@
             <tr>
                 <td>{{ m.name }}</td>
                 <td>{{ m.email }}</td>
-                <td><span class="badge badge-{{ m.status|lower }}">{{ m.status }}</span></td>
+                <td><span class="badge badge-{{ m.status|lower }}">{{ {"PENDING":"New","IN_PROGRESS":"In progress","ACCEPTED":"Accepted","REJECTED":"Rejected"}.get(m.status, m.status) }}</span></td>
                 <td>{{ m.created_at.strftime('%b %d, %Y') }}</td>
                 <td><a href="{{ url_for('admin.message_detail', message_id=m.id) }}" class="a-btn a-btn-sm">View</a></td>
             </tr>

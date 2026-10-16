@@ -56,6 +56,13 @@ VIDEO_UPLOAD_CHUNK_MB=8
 
 Replace `YOUR_USERNAME` with the PythonAnywhere username. A Gmail App Password is required; do not use the normal Gmail password. `DATABASE_URL` must be the absolute path to the existing persistent production database. Do not point it at a cloned or test database. Relative SQLite paths resolve against the project directory in development and are rejected in production.
 
+Set `SITE_URL` to the exact public HTTPS origin visitors use, replacing the
+placeholder with the actual PythonAnywhere hostname or verified custom domain.
+Reload the web app, then check `/robots.txt` and `/sitemap.xml`. The application
+intentionally withholds canonical URLs and the sitemap while `SITE_URL` is
+empty, non-HTTPS, or still a placeholder. Search Console and Bing Webmaster
+Tools submission steps are in the README's **Search engine setup** section.
+
 Use an SMTP host, port, and TLS mode supported by both your provider and PythonAnywhere account. For Gmail, the compatible pairs are port 587 with `SMTP_USE_SSL=0` (STARTTLS), or port 465 with `SMTP_USE_SSL=1` (implicit TLS); do not mix the port and mode. PythonAnywhere plan/network policy may restrict external SMTP, so a local SMTP test does not verify that the service is reachable from the hosted account.
 
 Product videos have no duration limit in the application. The default maximum
@@ -131,6 +138,14 @@ git pull
 source venv/bin/activate
 flask --app app db upgrade
 ```
+
+The contact migrations add optional phone-number storage, persistent inbox,
+read/archive/trash state, priorities, private notes, conversation activity,
+reply address/subject history, and email-attempt history. Apply all pending
+upgrades after backing up the existing production database and before reloading
+the web app. The message reply feature uses the existing `GMAIL_ADDRESS`,
+`GMAIL_APP_PASSWORD`, `SMTP_HOST`, `SMTP_PORT`, and `SMTP_USE_SSL` settings;
+there are no additional secrets or environment variables.
 
 Do not run `db init` on PythonAnywhere because the `migrations/` directory already exists.
 

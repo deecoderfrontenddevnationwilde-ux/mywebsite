@@ -1,30 +1,210 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}Contact Messages{% endblock %}
 {% block admin_content %}
-<div class="filter-chips" style="margin-bottom:1.5rem;">
-    <a href="{{ url_for('admin.messages_index', status='PENDING') }}" class="{{ 'active' if status_filter == 'PENDING' else '' }}">Pending</a>
-    <a href="{{ url_for('admin.messages_index', status='APPROVED') }}" class="{{ 'active' if status_filter == 'APPROVED' else '' }}">Approved</a>
-    <a href="{{ url_for('admin.messages_index', status='DECLINED') }}" class="{{ 'active' if status_filter == 'DECLINED' else '' }}">Declined</a>
-    <a href="{{ url_for('admin.messages_index', status='all') }}" class="{{ 'active' if status_filter == 'all' else '' }}">All</a>
-</div>
+<section class="message-dashboard">
+    <header class="message-dashboard-heading">
+        <div>
+            <p class="message-eyebrow"><i class="ri-inbox-archive-line" aria-hidden="true"></i> BUSINESS INBOX</p>
+            <h2>Contact messages</h2>
+            <p>Review requests, keep track of replies, and follow every conversation.</p>
+        </div>
+        <a class="a-btn" href="{{ url_for('admin.messages_index', **filters) }}">
+            <i class="ri-refresh-line" aria-hidden="true"></i> Refresh
+        </a>
+    </header>
 
-<div class="admin-panel">
-    <table class="admin-table">
-        <thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Status</th><th>Received</th><th>Actions</th></tr></thead>
-        <tbody>
-        {% for m in messages %}
-            <tr>
-                <td>{{ m.name }}</td>
-                <td>{{ m.email }}</td>
-                <td>{{ m.subject or '—' }}</td>
-                <td><span class="badge badge-{{ m.status|lower }}">{{ m.status }}</span></td>
-                <td>{{ m.created_at.strftime('%b %d, %Y') }}</td>
-                <td><a href="{{ url_for('admin.message_detail', message_id=m.id) }}" class="a-btn a-btn-sm">View</a></td>
-            </tr>
-        {% else %}
-            <tr class="empty-row"><td colspan="6">No messages in this category.</td></tr>
+    <div class="message-stats-grid" aria-label="Message statistics">
+        {% for key, label, icon in [
+            ("total", "Total messages", "ri-mail-line"),
+            ("new", "New / unread", "ri-mail-unread-line"),
+            ("read", "Read", "ri-mail-open-line"),
+            ("replied", "Replied", "ri-reply-line"),
+            ("approved", "Approved", "ri-checkbox-circle-line"),
+            ("declined", "Declined", "ri-close-circle-line")
+        ] %}
+        <a class="message-stat-card {{ 'is-current' if tab == key else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab=key if key in ('new', 'read', 'replied', 'approved', 'declined') else 'all') }}">
+            <span class="message-stat-icon"><i class="{{ icon }}" aria-hidden="true"></i></span>
+            <span class="message-stat-value">{{ stats[key] }}</span>
+            <span class="message-stat-label">{{ label }}</span>
+        </a>
         {% endfor %}
-        </tbody>
-    </table>
-</div>
+    </div>
+
+    <nav class="message-folder-tabs" aria-label="Message folders">
+        <a class="{{ 'active' if folder == 'all' and tab == 'all' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='all') }}"><i class="ri-inbox-line" aria-hidden="true"></i> All <span>{{ stats.total }}</span></a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'new' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='new') }}"><i class="ri-mail-unread-line" aria-hidden="true"></i> New <span>{{ stats.new }}</span></a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'read' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='read') }}"><i class="ri-mail-open-line" aria-hidden="true"></i> Read</a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'replied' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='replied') }}"><i class="ri-reply-line" aria-hidden="true"></i> Replied</a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'pending' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='pending') }}">Pending <span>{{ stats.pending }}</span></a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'approved' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='approved') }}">Approved</a>
+        <a class="{{ 'active' if folder == 'all' and tab == 'declined' else '' }}" href="{{ url_for('admin.messages_index', folder='all', tab='declined') }}">Declined</a>
+        <a class="{{ 'active' if folder == 'archive' else '' }}" href="{{ url_for('admin.messages_index', folder='archive', tab='all') }}"><i class="ri-archive-line" aria-hidden="true"></i> Archived <span>{{ stats.archived }}</span></a>
+        <a class="{{ 'active' if folder == 'trash' else '' }}" href="{{ url_for('admin.messages_index', folder='trash', tab='all') }}"><i class="ri-delete-bin-line" aria-hidden="true"></i> Trash <span>{{ stats.trash }}</span></a>
+    </nav>
+
+    <section class="admin-panel message-list-panel">
+        <form method="GET" class="message-filters">
+            <input type="hidden" name="folder" value="{{ folder }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <label class="message-search-label">Search messages
+                <span><i class="ri-search-line" aria-hidden="true"></i><input type="search" name="q" value="{{ filters.q }}" placeholder="Name, email, subject, or message"></span>
+            </label>
+            <label>Request status
+                <select name="status">
+                    {% for value, label in [("ALL", "All statuses"), ("PENDING", "Pending"), ("IN_PROGRESS", "In progress"), ("ACCEPTED", "Approved"), ("REJECTED", "Declined")] %}
+                    <option value="{{ value }}" {{ "selected" if filters.status == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Priority
+                <select name="priority">
+                    {% for value, label in [("ALL", "Any priority"), ("URGENT", "Urgent"), ("HIGH", "High"), ("NORMAL", "Normal"), ("LOW", "Low")] %}
+                    <option value="{{ value }}" {{ "selected" if filters.priority == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Read status
+                <select name="read">
+                    {% for value, label in [("all", "Read and unread"), ("unread", "Unread"), ("read", "Read")] %}
+                    <option value="{{ value }}" {{ "selected" if filters.read == value else "" }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Received from<input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+            <label>Received to<input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+            <label>Sort by
+                <select name="sort">
+                    <option value="newest" {{ "selected" if filters.sort == "newest" else "" }}>Newest first</option>
+                    <option value="oldest" {{ "selected" if filters.sort == "oldest" else "" }}>Oldest first</option>
+                    <option value="priority" {{ "selected" if filters.sort == "priority" else "" }}>Highest priority</option>
+                </select>
+            </label>
+            <div class="message-filter-actions">
+                <button class="a-btn a-btn-primary" type="submit"><i class="ri-equalizer-line" aria-hidden="true"></i> Filter</button>
+                <a class="a-btn" href="{{ url_for('admin.messages_index', folder=folder, tab=tab) }}">Clear</a>
+            </div>
+        </form>
+
+        <div class="message-inbox-toolbar">
+            <p><strong>{{ pagination.total }}</strong> message{{ "" if pagination.total == 1 else "s" }} in {{ {"all":"all mail", "inbox":"inbox", "archive":"archive", "trash":"Trash"}[folder] }}</p>
+            {% if pagination.total %}
+            <div class="message-bulk-controls">
+                <label for="bulk-action">With selected</label>
+                <select id="bulk-action" name="action" form="bulk-message-form" required>
+                    <option value="">Choose action</option>
+                    {% if folder == "trash" %}
+                    <option value="restore_trash">Restore from Trash</option>
+                    <option value="delete_permanently">Delete permanently</option>
+                    {% elif folder == "archive" %}
+                    <option value="restore_archive">Restore to inbox</option>
+                    <option value="trash">Move to Trash</option>
+                    <option value="read">Mark as read</option>
+                    <option value="unread">Mark as unread</option>
+                    <option value="approve">Approve (no email sent)</option>
+                    <option value="decline">Decline (no email sent)</option>
+                    {% else %}
+                    <option value="archive">Archive</option>
+                    <option value="trash">Move to Trash</option>
+                    <option value="read">Mark as read</option>
+                    <option value="unread">Mark as unread</option>
+                    <option value="approve">Approve (no email sent)</option>
+                    <option value="decline">Decline (no email sent)</option>
+                    {% endif %}
+                </select>
+                <button class="a-btn a-btn-sm" type="submit" form="bulk-message-form">Apply</button>
+            </div>
+            {% endif %}
+            <span>Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+        </div>
+
+        {% if messages %}
+        <form id="bulk-message-form" method="POST" action="{{ url_for('admin.messages_bulk_action') }}" onsubmit="return confirmBulkMessageAction()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="folder" value="{{ folder }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+        </form>
+        <div class="message-card-list">
+            {% for m in messages %}
+            <article class="message-card {{ 'message-card-unread' if not m.is_read else '' }}">
+                <label class="message-select-control" aria-label="Select message from {{ m.name }}">
+                    <input type="checkbox" name="message_ids" value="{{ m.id }}" form="bulk-message-form">
+                    <span></span>
+                </label>
+                <div class="message-avatar" aria-hidden="true">{{ m.name[:1]|upper }}</div>
+                <div class="message-card-content">
+                    <div class="message-card-topline">
+                        <a class="message-card-sender" href="{{ url_for('admin.message_detail', message_id=m.id) }}">{{ m.name }}</a>
+                        <time datetime="{{ m.created_at.isoformat() }}">{{ m.created_at.strftime('%b %d, %Y · %I:%M %p') }}</time>
+                    </div>
+                    <p class="message-card-email"><a href="mailto:{{ m.email }}">{{ m.email }}</a>{% if m.phone %}<span>·</span><a href="tel:{{ m.phone }}">{{ m.phone }}</a>{% endif %}</p>
+                    <h3><a href="{{ url_for('admin.message_detail', message_id=m.id) }}">{{ m.subject or "No subject" }}</a></h3>
+                    <p class="message-card-preview">{{ m.message }}</p>
+                    <div class="message-badges">
+                        <span class="badge badge-{{ m.status|lower }}">{{ {"PENDING":"Pending","IN_PROGRESS":"In progress","ACCEPTED":"Approved","REJECTED":"Declined"}.get(m.status, m.status) }}</span>
+                        <span class="badge badge-priority-{{ m.priority|lower }}">{{ m.priority|title }}</span>
+                        <span class="badge {{ 'badge-unread' if not m.is_read else 'badge-read' }}">{{ "Unread" if not m.is_read else "Read" }}</span>
+                        {% if m.id in replied_ids %}<span class="badge badge-replied"><i class="ri-reply-line" aria-hidden="true"></i> Replied</span>{% endif %}
+                        {% if m.archived_at %}<span class="badge badge-archived">Archived</span>{% endif %}
+                    </div>
+                </div>
+                <div class="message-card-actions">
+                    <a class="a-btn a-btn-sm" href="{{ url_for('admin.message_detail', message_id=m.id) }}">Open <i class="ri-arrow-right-line" aria-hidden="true"></i></a>
+                    {% if folder == "trash" %}
+                    <form method="POST" action="{{ url_for('admin.message_restore', message_id=m.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="a-btn a-btn-sm" type="submit" aria-label="Restore message from Trash">Restore</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('admin.message_trash', message_id=m.id) }}" onsubmit="return confirm('Move this message to Trash?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="a-btn a-btn-sm a-btn-danger" type="submit" aria-label="Move message to Trash"><i class="ri-delete-bin-line" aria-hidden="true"></i></button>
+                    </form>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="message-empty-state">
+            <span><i class="{{ 'ri-delete-bin-line' if folder == 'trash' else 'ri-mail-open-line' }}" aria-hidden="true"></i></span>
+            <h3>{{ "Trash is empty" if folder == "trash" else "No messages match these filters." if filters.q or filters.status != "ALL" or filters.read != "all" or filters.priority != "ALL" or filters.date_from or filters.date_to else "No messages here yet" }}</h3>
+            <p>{{ "Messages you move to Trash will appear here until permanently deleted." if folder == "trash" else "Try another filter or check back when a new contact message arrives." }}</p>
+        </div>
+        {% endif %}
+
+        {% if pagination.pages > 1 %}
+        <nav class="message-pagination" aria-label="Message pages">
+            {% if pagination.has_prev %}
+            <a class="a-btn a-btn-sm" href="{{ url_for('admin.messages_index', page=pagination.prev_num, **filters) }}"><i class="ri-arrow-left-line" aria-hidden="true"></i> Previous</a>
+            {% endif %}
+            <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+            <a class="a-btn a-btn-sm" href="{{ url_for('admin.messages_index', page=pagination.next_num, **filters) }}">Next <i class="ri-arrow-right-line" aria-hidden="true"></i></a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function confirmBulkMessageAction() {
+    const form = document.getElementById("bulk-message-form");
+    const selected = form ? form.querySelectorAll('input[name="message_ids"]:checked').length : 0;
+    const actionControl = document.getElementById("bulk-action");
+    const action = actionControl ? actionControl.value : "";
+    if (!selected || !action) {
+        window.alert("Select at least one message and a bulk action.");
+        return false;
+    }
+    const warning = action === "delete_permanently"
+        ? "Permanently delete the selected messages? This cannot be undone."
+        : action === "decline"
+            ? "Decline the selected messages? No email will be sent."
+            : action === "approve"
+                ? "Approve the selected messages? No email will be sent."
+                : `Apply this action to ${selected} selected message${selected === 1 ? "" : "s"}?`;
+    return window.confirm(warning);
+}
+</script>
 {% endblock %}

@@ -65,7 +65,7 @@ class DeploymentHealthTests(unittest.TestCase):
         homepage = self.client.get("/")
         self.assertEqual(homepage.status_code, 200)
         self.assertIn(
-            b"<title>DeeCoder Technologies | Innovative Tech Solutions</title>",
+            b"<title>DeeCoder Technologies | Official Website</title>",
             homepage.data,
         )
 

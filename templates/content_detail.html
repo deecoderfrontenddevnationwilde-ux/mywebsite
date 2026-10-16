@@ -10,14 +10,11 @@
 {% endif %}
 {% block title %}{{ detail_title }} | {{ company_name }}{% endblock %}
 {% block description %}{{ detail_description }}{% endblock %}
-{% block extra_head %}
-<meta property="og:type" content="{{ 'article' if content_type == 'news' else 'product' }}">
-<meta property="og:title" content="{{ detail_title }}">
-<meta property="og:description" content="{{ detail_description }}">
-<meta property="og:url" content="{{ request.base_url }}">
-<meta property="og:image" content="{{ url_for('public.uploaded_file', filename=detail_image, _external=True) if detail_image else url_for('static', filename='images/g6jYI.jpg', _external=True) }}">
-<link rel="canonical" href="{{ request.base_url }}">
-{% endblock %}
+{% block og_type %}{{ 'article' if content_type == 'news' else 'product' }}{% endblock %}
+{% block og_title %}{{ detail_title }}{% endblock %}
+{% block og_description %}{{ detail_description }}{% endblock %}
+{% block og_image %}{{ seo_site_url }}{{ url_for('public.uploaded_file', filename=detail_image) if detail_image else url_for('static', filename='images/g6jYI.jpg') }}{% endblock %}
+{% block og_image_alt %}{{ detail_title }}{% endblock %}
 
 {% block content %}
 <section class="content-detail-page content-detail-{{ content_type }}">

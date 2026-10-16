@@ -15,6 +15,7 @@ functions in this file.
 from __future__ import annotations
 
 import logging
+import re
 import ssl
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -30,7 +31,14 @@ class EmailError(Exception):
     pass
 
 
-def send_email(to_address: str, subject: str, html_body: str, text_body: str | None = None) -> bool:
+def send_email(
+    to_address: str,
+    subject: str,
+    html_body: str,
+    text_body: str | None = None,
+    *,
+    reply_to: str | None = None,
+) -> bool:
     """
     Send one email via Gmail SMTP.
 
@@ -48,6 +56,8 @@ def send_email(to_address: str, subject: str, html_body: str, text_body: str | N
     msg["Subject"] = subject
     msg["From"] = f"{current_app.config.get('COMPANY_NAME', 'Website')} <{gmail_address}>"
     msg["To"] = to_address
+    if reply_to:
+        msg["Reply-To"] = reply_to
 
     if text_body:
         msg.attach(MIMEText(text_body, "plain"))
@@ -59,7 +69,10 @@ def send_email(to_address: str, subject: str, html_body: str, text_body: str | N
             phase = "authentication"
             server.login(gmail_address, gmail_password)
             phase = "message submission"
-            server.sendmail(gmail_address, [to_address], msg.as_string())
+            refused_recipients = server.sendmail(gmail_address, [to_address], msg.as_string())
+            if refused_recipients:
+                logger.error("SMTP refused an email recipient (%s)", len(refused_recipients))
+                return False
         logger.info("SMTP accepted an email for delivery")
         return True
     except (OSError, smtplib.SMTPException, ValueError) as exc:
@@ -137,9 +150,12 @@ def send_new_contact_notification(contact_message) -> bool:
         return False
     name = escape(contact_message.name)
     email = escape(contact_message.email)
-    subject_text = contact_message.subject or "(no subject)"
+    subject_text = re.sub(r"\s+", " ", contact_message.subject or "(no subject)").strip()
     subject = escape(subject_text)
     message = escape(contact_message.message).replace("\n", "<br>")
+    phone = escape(contact_message.phone or "")
+    phone_line = f"<br><strong>Phone:</strong> {phone}" if phone else ""
+    phone_text = f"Phone: {contact_message.phone}\n" if contact_message.phone else ""
     return send_email(
         recipient,
         f"New contact form message: {subject_text}",
@@ -147,14 +163,15 @@ def send_new_contact_notification(contact_message) -> bool:
             "<p>A new contact form message was received.</p>"
             f"<p><strong>Name:</strong> {name}<br>"
             f"<strong>Email:</strong> {email}<br>"
-            f"<strong>Subject:</strong> {subject}</p>"
+            f"<strong>Subject:</strong> {subject}{phone_line}</p>"
             f"<p>{message}</p>"
         ),
         text_body=(
             "A new contact form message was received.\n"
             f"Name: {contact_message.name}\nEmail: {contact_message.email}\n"
-            f"Subject: {subject_text}\n\n{contact_message.message}"
+            f"{phone_text}Subject: {subject_text}\n\n{contact_message.message}"
         ),
+        reply_to=contact_message.email,
     )
 
 
@@ -223,6 +240,29 @@ def send_contact_submission_confirmation(contact_message) -> bool:
     )
 
 
+def send_contact_admin_reply(
+    contact_message,
+    reply_text: str,
+    *,
+    recipient_email: str | None = None,
+    subject: str | None = None,
+) -> bool:
+    safe_reply = escape(reply_text).replace("\n", "<br>")
+    return send_email(
+        recipient_email or contact_message.email,
+        subject or f"Reply to your message — {_company_name()}",
+        (
+            f"<p>Hello {escape(contact_message.name)},</p>"
+            f"<p>{safe_reply}</p>"
+            f"<p>— The {escape(_company_name())} Team</p>"
+        ),
+        text_body=(
+            f"Hello {contact_message.name},\n\n{reply_text}\n\n"
+            f"— The {_company_name()} Team"
+        ),
+    )
+
+
 def send_contact_approval_notification(contact_message) -> bool:
     html = render_template(
         "emails/contact_approved.html",
@@ -231,9 +271,13 @@ def send_contact_approval_notification(contact_message) -> bool:
     )
     return send_email(
         contact_message.email,
-        f"Your message has been approved — {_company_name()}",
+        f"Your request has been accepted — {_company_name()}",
         html,
-        text_body="Your message has been reviewed by our team and approved. We will get back to you as soon as possible.",
+        text_body=(
+            "Your request has been reviewed and accepted by our team. "
+            "We will get back to you as soon as possible."
+            + (f"\n\nA note from our team:\n{contact_message.admin_note}" if contact_message.admin_note else "")
+        ),
     )
 
 
@@ -247,5 +291,8 @@ def send_contact_declined_notification(contact_message) -> bool:
         contact_message.email,
         f"An update on your message — {_company_name()}",
         html,
-        text_body="Your message has been reviewed and declined by the admin.",
+        text_body=(
+            "Your request has been reviewed and we are unable to accept it at this time."
+            + (f"\n\nA note from our team:\n{contact_message.admin_note}" if contact_message.admin_note else "")
+        ),
     )

@@ -1,0 +1,75 @@
+<form class="contact-form contact-form-shared reveal"
+      id="{{ form_id }}"
+      data-endpoint="{{ url_for('api.api_contact') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="submission_token" value="">
+    <div class="contact-form-honeypot" aria-hidden="true">
+        <label for="{{ form_id }}-reference">Leave this field empty</label>
+        <input type="text"
+               id="{{ form_id }}-reference"
+               name="contact_reference_code"
+               tabindex="-1"
+               autocomplete="off">
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="{{ form_id }}-name">Full Name <span aria-hidden="true">*</span></label>
+            <input type="text"
+                   id="{{ form_id }}-name"
+                   name="name"
+                   maxlength="150"
+                   autocomplete="name"
+                   required
+                   placeholder="Your full name">
+        </div>
+        <div class="form-group">
+            <label for="{{ form_id }}-email">Email Address <span aria-hidden="true">*</span></label>
+            <input type="email"
+                   id="{{ form_id }}-email"
+                   name="email"
+                   maxlength="254"
+                   autocomplete="email"
+                   required
+                   placeholder="you@example.com">
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="{{ form_id }}-phone">Phone Number <span class="contact-form-optional">(optional)</span></label>
+            <input type="tel"
+                   id="{{ form_id }}-phone"
+                   name="phone"
+                   maxlength="50"
+                   autocomplete="tel"
+                   inputmode="tel"
+                   placeholder="+234 800 000 0000">
+        </div>
+        <div class="form-group">
+            <label for="{{ form_id }}-subject">Subject <span aria-hidden="true">*</span></label>
+            <input type="text"
+                   id="{{ form_id }}-subject"
+                   name="subject"
+                   maxlength="200"
+                   required
+                   placeholder="How can we help?">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="{{ form_id }}-message">Message <span aria-hidden="true">*</span></label>
+        <textarea id="{{ form_id }}-message"
+                  name="message"
+                  maxlength="5000"
+                  required
+                  placeholder="Tell us about your project or question..."></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary contact-submit">
+        <span class="contact-submit-spinner" aria-hidden="true"></span>
+        <span class="contact-submit-label">Send Message</span>
+    </button>
+    <p class="contact-form-required-note"><span aria-hidden="true">*</span> Required fields</p>
+    <div class="form-feedback" role="status" aria-live="polite" aria-atomic="true"></div>
+</form>

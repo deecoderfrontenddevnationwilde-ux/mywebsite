@@ -2,7 +2,7 @@
 {% block content %}
 <p style="font-size:18px;font-weight:700;color:#ffffff;margin:0 0 12px 0;">An update on your message</p>
 <p>Hi {{ contact.name }},</p>
-<p>Your message has been reviewed and declined by the admin.</p>
+<p>Your request has been reviewed and we are unable to accept it at this time.</p>
 {% if contact.admin_note %}
 <p style="background:rgba(255,255,255,0.05);border-radius:10px;padding:14px 16px;color:#94a3b8;margin:18px 0;">
   <strong style="color:#e2e8f0;">Note from our team:</strong><br>{{ contact.admin_note }}

@@ -1,52 +1,204 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}Message from {{ message.name }}{% endblock %}
 {% block admin_content %}
-<div class="admin-panel">
-    <p><strong>From:</strong> {{ message.name }} &lt;{{ message.email }}&gt;</p>
-    <p><strong>Subject:</strong> {{ message.subject or '—' }}</p>
-    <p><strong>Received:</strong> {{ message.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
-    <p><strong>Status:</strong> <span class="badge badge-{{ message.status|lower }}">{{ message.status }}</span></p>
-    {% if message.reviewed_at %}<p><strong>Reviewed:</strong> {{ message.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</p>{% endif %}
-
-    <div class="admin-form-group" style="margin-top:1.25rem;">
-        <label>Message</label>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;white-space:pre-wrap;">{{ message.message }}</div>
-    </div>
-
-    {% if message.admin_note %}
-    <div class="admin-form-group">
-        <label>Existing Admin Note</label>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:1rem;">{{ message.admin_note }}</div>
-    </div>
-    {% endif %}
-
-    {% if message.status == 'PENDING' %}
-    <div class="admin-form-group" style="margin-top:1.5rem;">
-        <label for="admin_note">Admin Note (optional, included in decline emails)</label>
-        <textarea id="admin_note" name="admin_note_display" style="min-height:80px;"></textarea>
-    </div>
-    <div class="admin-form-actions">
-        <form method="POST" action="{{ url_for('admin.message_approve', message_id=message.id) }}" style="display:inline;" onsubmit="return prepAndConfirm(this)">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="admin_note" value="">
-            <button type="submit" class="a-btn a-btn-primary">Approve</button>
-        </form>
-        <form method="POST" action="{{ url_for('admin.message_decline', message_id=message.id) }}" style="display:inline;" onsubmit="return prepAndConfirm(this)">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="admin_note" value="">
-            <button type="submit" class="a-btn a-btn-danger">Decline</button>
-        </form>
-    </div>
-    <script>
-        function prepAndConfirm(form) {
-            const noteBox = document.getElementById('admin_note');
-            const note = noteBox ? noteBox.value : '';
-            form.querySelector('input[name="admin_note"]').value = note;
-            return confirm('Are you sure? This will email the sender immediately.');
-        }
-    </script>
+<div class="message-detail-actions">
+    <a href="{{ url_for('admin.messages_index', folder='trash' if message.deleted_at else 'archive' if message.archived_at else 'inbox') }}" class="a-btn"><i class="ri-arrow-left-line" aria-hidden="true"></i> Back to messages</a>
+    {% if not message.deleted_at %}
+    <form method="POST" action="{{ url_for('admin.message_set_read', message_id=message.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="is_read" value="{{ 0 if message.is_read else 1 }}">
+        <button class="a-btn" type="submit">Mark as {{ "unread" if message.is_read else "read" }}</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.message_archive', message_id=message.id) }}" onsubmit="return confirm('{{ 'Restore this message to the inbox?' if message.archived_at else 'Archive this message?' }}')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="archived" value="{{ 0 if message.archived_at else 1 }}">
+        <button class="a-btn {{ 'a-btn-primary' if message.archived_at else '' }}" type="submit">{{ "Restore to inbox" if message.archived_at else "Archive" }}</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.message_trash', message_id=message.id) }}" onsubmit="return confirm('Move this message to Trash? You can restore it later.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="a-btn a-btn-danger" type="submit"><i class="ri-delete-bin-line" aria-hidden="true"></i> Move to Trash</button>
+    </form>
     {% else %}
-    <a href="{{ url_for('admin.messages_index') }}" class="a-btn" style="margin-top:1rem;">&larr; Back to Messages</a>
+    <form method="POST" action="{{ url_for('admin.message_restore', message_id=message.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="a-btn a-btn-primary" type="submit"><i class="ri-inbox-unarchive-line" aria-hidden="true"></i> Restore from Trash</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.message_delete_permanently', message_id=message.id) }}" onsubmit="return confirm('Permanently delete this message and its history? This cannot be undone.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="a-btn a-btn-danger" type="submit"><i class="ri-delete-bin-line" aria-hidden="true"></i> Delete permanently</button>
+    </form>
     {% endif %}
 </div>
+
+<section class="admin-panel">
+    <div class="message-heading">
+        <div>
+            <p class="message-eyebrow">Received {{ message.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            <h2>{{ message.subject or "No subject" }}</h2>
+        </div>
+        <div class="message-badges">
+            <span class="badge badge-{{ message.status|lower }}">{{ {"PENDING":"New","IN_PROGRESS":"In progress","ACCEPTED":"Approved","REJECTED":"Declined"}.get(message.status, message.status) }}</span>
+            <span class="badge {{ 'badge-unread' if not message.is_read else 'badge-read' }}">{{ "Unread" if not message.is_read else "Read" }}</span>
+            <span class="badge badge-priority-{{ message.priority|lower }}">{{ message.priority|title }} priority</span>
+            {% if message.archived_at %}<span class="badge badge-archived">Archived</span>{% endif %}
+            {% if message.deleted_at %}<span class="badge badge-declined">In Trash</span>{% endif %}
+        </div>
+    </div>
+    <dl class="message-sender-details">
+        <div><dt>From</dt><dd>{{ message.name }} · <a href="mailto:{{ message.email }}">{{ message.email }}</a></dd></div>
+        {% if message.phone %}<div><dt>Phone</dt><dd><a href="tel:{{ message.phone }}">{{ message.phone }}</a></dd></div>{% endif %}
+        {% if message.reviewed_at %}<div><dt>Decision date</dt><dd>{{ message.reviewed_at.strftime('%B %d, %Y at %I:%M %p') }}</dd></div>{% endif %}
+    </dl>
+    <div class="message-original">
+        <h3>Original message</h3>
+        <p>{{ message.message }}</p>
+    </div>
+</section>
+
+<section class="admin-panel message-priority-panel">
+    <div>
+        <h2>Priority</h2>
+        <p class="admin-help-text">Set an internal priority for follow-up.</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin.message_set_priority', message_id=message.id) }}" class="message-priority-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="sr-only" for="message-priority">Message priority</label>
+        <select id="message-priority" name="priority">
+            {% for value in ["LOW", "NORMAL", "HIGH", "URGENT"] %}
+            <option value="{{ value }}" {{ "selected" if message.priority == value else "" }}>{{ value|title }}</option>
+            {% endfor %}
+        </select>
+        <button class="a-btn a-btn-sm" type="submit">Update priority</button>
+    </form>
+</section>
+
+<section class="admin-panel">
+    <h2>Review request</h2>
+    <p class="admin-help-text">Approving or declining changes the request status and sends the matching email. Changing a decision later is recorded in the activity history and sends the new decision email.</p>
+    {% if message.status in ("PENDING", "IN_PROGRESS") %}
+    <form method="POST" action="{{ url_for('admin.message_set_work_status', message_id=message.id) }}" class="message-work-status-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if message.status == "PENDING" %}
+        <input type="hidden" name="status" value="IN_PROGRESS">
+        <button class="a-btn" type="submit">Mark In Progress</button>
+        {% else %}
+        <input type="hidden" name="status" value="PENDING">
+        <button class="a-btn" type="submit">Move Back to New</button>
+        {% endif %}
+    </form>
+    {% endif %}
+    <div class="message-decision-grid">
+        <form method="POST" action="{{ url_for('admin.message_approve', message_id=message.id) }}" data-message-submit data-loading-label="Approving…" onsubmit="return confirm('{{ 'Update this request to Approved and email the visitor?' if message.status == 'REJECTED' else 'Approve this request and email the visitor?' }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="request_token" value="{{ accept_token }}">
+            <label for="accept-note">Optional message to include in the approval email</label>
+            <textarea id="accept-note" name="admin_note" maxlength="5000" rows="4"></textarea>
+            <label for="accept-internal-note">Optional internal note (private; never emailed)</label>
+            <textarea id="accept-internal-note" name="internal_note" maxlength="10000" rows="3"></textarea>
+            <button class="a-btn a-btn-primary" type="submit">{{ "Update to Approved" if message.status == "REJECTED" else "Approve Request" }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.message_decline', message_id=message.id) }}" data-message-submit data-loading-label="Declining…" onsubmit="return confirm('{{ 'Update this request to Declined and email the visitor?' if message.status == 'ACCEPTED' else 'Decline this request and email the visitor?' }}')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="request_token" value="{{ reject_token }}">
+            <label for="reject-note">Optional explanation to include in the decline email</label>
+            <textarea id="reject-note" name="admin_note" maxlength="5000" rows="4"></textarea>
+            <label for="decline-internal-note">Optional internal note (private; never emailed)</label>
+            <textarea id="decline-internal-note" name="internal_note" maxlength="10000" rows="3"></textarea>
+            <button class="a-btn a-btn-danger" type="submit">{{ "Update to Declined" if message.status == "ACCEPTED" else "Decline Request" }}</button>
+        </form>
+    </div>
+</section>
+
+<section class="admin-panel">
+    <h2>Internal note</h2>
+    <p class="admin-help-text">Visible only in the admin dashboard. This note is never included in emails to the sender.</p>
+    <form method="POST" action="{{ url_for('admin.message_save_internal_note', message_id=message.id) }}" class="message-reply-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="internal-note">Private note</label>
+        <textarea id="internal-note" name="internal_note" maxlength="10000" rows="4" placeholder="Add context for the team…">{{ message.internal_note or "" }}</textarea>
+        <button class="a-btn" type="submit">Save internal note</button>
+    </form>
+</section>
+
+<section class="admin-panel">
+    <h2>Conversation and activity history</h2>
+    <ol class="message-timeline">
+        {% for activity in activities %}
+        <li class="message-timeline-item">
+            <div class="message-timeline-heading">
+                <strong>{{ {
+                    "BUSINESS_NOTIFICATION":"Business notification",
+                    "SUBMISSION_CONFIRMATION":"Submission confirmation",
+                    "ADMIN_REPLY":"Administrator reply",
+                    "REQUEST_ACCEPTED":"Approval notice",
+                    "REQUEST_REJECTED":"Decline notice",
+                    "STATUS_CHANGED":"Workflow update",
+                    "NOTE_UPDATED":"Internal note updated",
+                    "PRIORITY_CHANGED":"Priority updated",
+                    "ARCHIVED":"Message archived",
+                    "RESTORED":"Message restored",
+                    "TRASHED":"Message moved to Trash"
+                }.get(activity.event_type, activity.event_type.replace("_", " ").title()) }}</strong>
+                <span class="badge badge-{{ activity.email_status|lower }}">{{ {
+                    "SENDING":"Sending",
+                    "ACCEPTED":"Accepted by email service",
+                    "FAILED":"Failed",
+                    "NOT_APPLICABLE":"Activity"
+                }.get(activity.email_status, activity.email_status) }}</span>
+            </div>
+            <p class="message-activity-meta">
+                {{ activity.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                · {{ activity.attempt_count }} attempt{{ "" if activity.attempt_count == 1 else "s" }}
+                {% if activity.admin_username %}· by {{ activity.admin_username }}{% endif %}
+                {% if activity.accepted_at %}· SMTP acceptance recorded; inbox delivery is not verified{% endif %}
+            </p>
+            {% if activity.recipient_email %}<p class="message-activity-meta">To: {{ activity.recipient_email }}{% if activity.email_subject %} · Subject: {{ activity.email_subject }}{% endif %}</p>{% endif %}
+            {% if activity.body %}<div class="message-activity-body">{{ activity.body }}</div>{% endif %}
+            {% if activity.provider_message_id %}<p class="message-activity-meta">Provider reference: {{ activity.provider_message_id }}</p>{% endif %}
+            {% if activity.email_status == "FAILED" %}
+            <form method="POST" action="{{ url_for('admin.message_email_retry', message_id=message.id, activity_id=activity.id) }}" data-message-submit data-loading-label="Retrying…">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="a-btn a-btn-sm" type="submit">Retry email</button>
+            </form>
+            {% endif %}
+        </li>
+        {% else %}
+        <li class="message-timeline-empty">No email or administrative activity has been recorded.</li>
+        {% endfor %}
+    </ol>
+</section>
+
+<section class="admin-panel">
+    <h2>Reply to visitor</h2>
+    <form method="POST" action="{{ url_for('admin.message_reply', message_id=message.id) }}" class="message-reply-form" data-message-submit data-loading-label="Sending reply…">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="request_token" value="{{ reply_token }}">
+        <div class="message-reply-addresses">
+            <label for="reply-recipient">To
+                <input id="reply-recipient" name="recipient_email" type="email" maxlength="255" value="{{ message.email }}" required>
+            </label>
+            <label for="reply-subject">Subject
+                <input id="reply-subject" name="email_subject" type="text" maxlength="200" value="{{ ('Re: ' ~ (message.subject or 'Your contact message'))[:200] }}" required>
+            </label>
+        </div>
+        <label for="reply">Message</label>
+        <textarea id="reply" name="reply" maxlength="10000" rows="7" required placeholder="Write your response to {{ message.name }}…"></textarea>
+        <p class="admin-help-text">Replies are recorded here. The status reports acceptance by SMTP; delivery to the recipient's inbox is not confirmed.</p>
+        <button class="a-btn a-btn-primary" type="submit">Send Reply</button>
+    </form>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    document.querySelectorAll("form[data-message-submit]").forEach((form) => {
+        form.addEventListener("submit", (event) => {
+            if (event.defaultPrevented) return;
+            const button = form.querySelector('button[type="submit"]');
+            if (!button) return;
+            button.disabled = true;
+            button.textContent = form.dataset.loadingLabel || "Working…";
+            button.setAttribute("aria-busy", "true");
+        });
+    });
+</script>
 {% endblock %}

@@ -1,8 +1,8 @@
 # DeeCoder Technologies — Full-Stack Website
 
 Your original HTML/CSS front end, now backed by a real Flask + SQLAlchemy
-application: dynamic News and Products, a newsletter, a moderated contact
-form, an admin dashboard, and Gmail email notifications.
+application: dynamic News and Products, a newsletter, contact forms with a
+persistent admin inbox and conversation history, and Gmail email notifications.
 
 **Nothing about your original design was rebuilt.** `static/css/newadd.css`
 is your file, untouched. All new styling lives in separate additive files
@@ -30,7 +30,7 @@ company_website/
 │   ├── product.py               # Product
 │   ├── product_video.py         # ProductVideo
 │   ├── subscriber.py             # Subscriber
-│   └── contact.py                # ContactMessage
+│   └── contact.py                # ContactMessage + ContactMessageActivity
 │
 ├── routes/
 │   ├── public.py               # /, /news, /news/<slug>, /products, /products/<slug>, /unsubscribe
@@ -126,6 +126,10 @@ flask db upgrade
 This creates `instance/company.db` and the `migrations/` folder. Whenever
 you change a model later, run `flask db migrate -m "..."` then
 `flask db upgrade` again — no need to touch SQLite directly.
+The contact migrations add phone storage, the persistent inbox and conversation
+history, and the newer archive/trash, priority, internal-note, and reply-history
+fields. Deploy all pending migrations with `flask db upgrade` after backing up
+production data.
 
 ### Step 6 — Create your admin account
 ```bash
@@ -199,16 +203,34 @@ keyboard seeking.
   subscribers from **Subscribers** in the dashboard.
 - Subscriber emails are never exposed on the public website.
 
-## 6. How contact approval/decline works
+## 6. Contact inbox and conversation workflow
 
-1. A visitor submits the contact form → saved as **PENDING** → they see
-   "waiting for admin approval" and receive a confirmation email.
-2. In **Contact Messages**, you can view each message and click
-   **Approve** or **Decline** (optionally adding a note, included in the
-   decline email).
-3. The sender is emailed automatically the moment you decide. Clicking
-   Approve/Decline twice will never send a duplicate email — this is
-   tracked per-message.
+- The homepage and Contact page use the same backend endpoint. Submissions
+  are validated, rate-limited, deduplicated by submission token, saved in the
+  database, and sent to the configured business inbox. The visitor receives a
+  separate confirmation email.
+- In the authenticated admin dashboard, **Contact Messages** supports search,
+  status/read/priority filters, date filtering, sorting, pagination, archive,
+  and a recoverable Trash folder. The dashboard shows inbox statistics and
+  supports bulk actions; bulk approvals/declines update status without sending
+  email.
+  Opening a message marks it read; read state is separate from its request
+  workflow status (**New**, **In Progress**, **Approved**, or **Declined**).
+- Administrators can reply to visitors, accept or reject requests with an
+  optional note, and see the persisted conversation and outgoing email
+  attempt history. Replies include an editable recipient and subject; those
+  values and failed attempts are stored for retries. Failed messages can be
+  retried from the message details. Administrators can add private notes and
+  set priorities; these stay in the admin dashboard and activity history.
+- Deleting a message moves it to Trash. It can be restored or permanently
+  deleted from there. Individual decisions send a clearly confirmed
+  acceptance/decline email, and changing a decision later is recorded.
+- Email statuses describe SMTP submission acceptance, not inbox delivery.
+  The configured Gmail SMTP service does not provide a reliable delivery
+  receipt or provider message ID, so the dashboard does not claim delivery.
+- Apply `20261016_contact_phone`, `20261016_contact_workflow`, and
+  `20261016_contact_management` with
+  `flask db upgrade` after backing up an existing production database.
 
 ## 7. Security notes
 
@@ -216,9 +238,9 @@ keyboard seeking.
   — never stored or logged in plain text.
 - Sessions: Flask's signed session cookie, `HttpOnly`, `SameSite=Lax`,
   and marked `Secure` automatically once `FLASK_ENV=production`.
-- CSRF: `Flask-WTF`'s `CSRFProtect` protects every admin form (the JSON
-  `/api/*` endpoints are exempted, since they carry no session-based
-  admin privileges).
+- CSRF: `Flask-WTF`'s `CSRFProtect` protects every admin form. The contact
+JSON endpoint validates the token rendered into its form; other public JSON
+endpoints do not use session-based admin privileges.
 - Uploads: extension allow-list **and** magic-byte checking (so a
   renamed `.exe` can't sneak in as `.jpg`), random generated filenames
   (original filenames are never trusted or reused).
@@ -245,9 +267,9 @@ handle the rest.
   loop in `_maybe_notify_subscribers_of_news` (in `routes/admin.py`) to
   a background task queue (e.g. Celery or RQ) so publishing an article
   doesn't block the admin's browser while emails send.
-- **Rate limiting** on the public `/api/subscribe` and `/api/contact`
-  endpoints isn't implemented (no extra dependency was added for it).
-  If spam becomes an issue, add `Flask-Limiter`.
+- **Newsletter signup rate limiting** is not implemented. Contact messages
+  already have a per-IP rate limit and honeypot protection; if newsletter spam
+  becomes an issue, add a suitable limit to `/api/subscribe`.
 - The rich-text fields (article content, product description) accept
   basic HTML and render it as-is on the public page — only admins can
   write it, so this is safe by design, but there's no WYSIWYG editor
@@ -270,3 +292,53 @@ handle the rest.
   if deploying to an ephemeral filesystem (e.g. Heroku-style platforms).
 - Rotate `SECRET_KEY` and the Gmail App Password only through your
   hosting platform's environment/secrets manager — never commit `.env`.
+
+## 11. Search engine setup
+
+Set `SITE_URL` in the production environment to the exact public HTTPS origin
+(for example, `https://www.your-real-domain.com`, without a path). Do not use
+the example text literally. With no valid HTTPS origin configured, the app
+omits canonical/absolute social metadata and returns HTTP 503 for
+`/sitemap.xml` rather than publishing URLs for localhost or a placeholder.
+After changing the setting, reload the app and check `/robots.txt` and
+`/sitemap.xml`. The sitemap contains public company pages and published news
+and products. The robots file requests that crawlers avoid admin, API,
+unsubscribe, and uploaded-file paths; this is not an access-control mechanism.
+
+### Google Search Console
+
+1. Open [Google Search Console](https://search.google.com/search-console/) and
+   add the official domain as a **Domain** property.
+2. Verify ownership by adding the DNS TXT record Google provides at your
+   domain registrar. Verification is complete only when Google confirms it.
+3. In the verified property, open **Sitemaps**, enter `sitemap.xml`, and submit.
+4. Use **URL inspection** for the canonical homepage, run the live test, and
+   request indexing if appropriate.
+5. Review **Pages** and **Performance** periodically for indexing issues and
+   branded query impressions/clicks. Search Console does not guarantee a
+   Knowledge Panel.
+
+### Bing Webmaster Tools
+
+1. Add the official HTTPS site at
+   [Bing Webmaster Tools](https://www.bing.com/webmasters/).
+2. Verify ownership using a Bing-provided DNS record or another offered method.
+3. Submit `https://YOUR_OFFICIAL_DOMAIN/sitemap.xml` under **Sitemaps** (replace
+   the placeholder with the actual domain).
+4. Review URL inspection, indexing status, and search performance in Bing.
+
+### Structured-data checks
+
+- Test the public homepage and `/about` with
+  [Google's Rich Results Test](https://search.google.com/test/rich-results/).
+- Validate the JSON-LD with
+  [Schema Markup Validator](https://validator.schema.org/).
+- The website emits an `Organization` entity only when a real HTTPS `SITE_URL`
+  is configured. Unverified social profiles, postal addresses, founding dates,
+  and company identifiers are intentionally not asserted.
+- Before enabling production SEO, confirm the exact official HTTPS domain,
+  which footer social accounts are official, whether `static/images/g6jYI.jpg`
+  is an approved logo or should be replaced, and any verified postal address,
+  founding date, registration identifier, or DeeCoder Academy relationship.
+  The current repository documentation describes its image assets as
+  placeholders; therefore the structured data does not claim a verified logo.

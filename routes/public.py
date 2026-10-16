@@ -67,6 +67,16 @@ def home():
     )
 
 
+@public_bp.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@public_bp.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+
 @public_bp.route("/terms")
 def terms():
     return render_template("terms.html")

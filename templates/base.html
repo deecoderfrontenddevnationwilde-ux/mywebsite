@@ -3,13 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DeeCoder Technologies | Innovative Tech Solutions{% endblock %}</title>
-    <meta name="description" content="{% block description %}DeeCoder Technologies builds high-performance web applications, cybersecurity solutions, and scalable digital products. Engineering the digital future.{% endblock %}">
-    <meta name="keywords" content="web development, cybersecurity, UI/UX design, front-end, React, code review">
+    <title>{% block title %}{{ company_name }} | Official Website{% endblock %}</title>
+    <meta name="description" content="{% block description %}DeeCoder Technologies builds web applications, responsive interfaces, and software solutions with a focus on secure, reliable digital experiences.{% endblock %}">
+    {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+    {% if request.endpoint == 'public.unsubscribe' %}<meta name="robots" content="noindex, nofollow">{% endif %}
+    <meta property="og:site_name" content="DeeCoder Technologies">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title()|striptags|trim }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description()|striptags|trim }}{% endblock %}">
+    {% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ self.og_title()|striptags|trim }}">
+    <meta name="twitter:description" content="{{ self.og_description()|striptags|trim }}">
+    {% if seo_site_url %}
+    <meta property="og:image" content="{% block og_image %}{{ seo_site_url }}{{ url_for('static', filename='images/g6jYI.jpg') }}{% endblock %}">
+    <meta property="og:image:alt" content="{% block og_image_alt %}DeeCoder Technologies{% endblock %}">
+    <meta name="twitter:image" content="{{ self.og_image() }}">
+    {% endif %}
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/site-extra.css', v='20261010-responsive-content-titles') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/g6jYI.jpg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/newadd.css', v='20261016-responsive-images') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site-extra.css', v='20261016-responsive-layout-2') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/DeeCoder_technologies_favicon.png') }}">
+    {% block structured_data %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -27,8 +42,8 @@
 
     <nav class="nav">
         <a href="{{ url_for('public.home') }}" class="nav-brand">
-            <img src="{{ url_for('static', filename='images/g6jYI.jpg') }}" alt="DeeCoder Technologies">
-            Dee<span>Coder</span>
+            <img src="{{ url_for('static', filename='images/DeeCoder_technologies_favicon.png') }}" alt="DeeCoder Technologies">
+            Dee<span>Coder</span> Technologies
         </a>
         <button class="menu-btn" id="menuBtn" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -36,12 +51,12 @@
         <ul class="nav-links" id="navLinks">
             <li><a href="{{ url_for('public.home') }}#home">Home</a></li>
             <li><a href="{{ url_for('public.home') }}#services">Services</a></li>
-            <li><a href="{{ url_for('public.home') }}#about">About</a></li>
+            <li><a href="{{ url_for('public.about') }}">About</a></li>
             <li><a href="{{ url_for('public.news_list') }}">News</a></li>
             <li><a href="{{ url_for('public.products_list') }}">Products</a></li>
             <li><a href="{{ url_for('public.video_list') }}">Video Previews</a></li>
             <li><a href="{{ url_for('public.home') }}#pricing">Pricing</a></li>
-            <li><a href="{{ url_for('public.home') }}#contact" class="nav-cta">Get Started</a></li>
+            <li><a href="{{ url_for('public.contact') }}" class="nav-cta">Contact</a></li>
         </ul>
     </nav>
 
@@ -55,20 +70,19 @@
                     <h3>Dee<span>Coder</span> Technologies</h3>
                     <p>Front-end developer building clean, responsive websites and providing professional code reviews.</p>
                     <div class="socials">
-                        <a href="https://github.com/deecoderfrontenddevnationwilde-ux" target="_blank" aria-label="GitHub"><i class="ri-github-fill"></i></a>
-                        <a href="https://www.linkedin.com/in/dee-coder-front-end-dev-dee-coder-814a2b416" target="_blank" aria-label="LinkedIn"><i class="ri-linkedin-fill"></i></a>
-                        <a href="#" aria-label="Twitter"><i class="ri-twitter-x-fill"></i></a>
-                        <a href="https://www.tiktok.com/@deecoderfrontenddev" target="_blank" aria-label="TikTok"><i class="ri-tiktok-fill"></i></a>
+                        <a href="https://github.com/deecoderfrontenddevnationwilde-ux" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i class="ri-github-fill"></i></a>
+                        <a href="https://www.linkedin.com/in/dee-coder-front-end-dev-dee-coder-814a2b416" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="ri-linkedin-fill"></i></a>
+                        <a href="https://www.tiktok.com/@deecoderfrontenddev" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="ri-tiktok-fill"></i></a>
                     </div>
                 </div>
                 <div class="footer-col">
                     <h4>Explore</h4>
                     <ul>
-                        <li><a href="{{ url_for('public.home') }}#about">About</a></li>
+                        <li><a href="{{ url_for('public.about') }}">About</a></li>
                         <li><a href="{{ url_for('public.news_list') }}">News</a></li>
                         <li><a href="{{ url_for('public.products_list') }}">Products</a></li>
                         <li><a href="{{ url_for('public.home') }}#pricing">Pricing</a></li>
-                        <li><a href="{{ url_for('public.home') }}#contact">Contact</a></li>
+                        <li><a href="{{ url_for('public.contact') }}">Contact</a></li>
                         <li><a href="{{ url_for('public.terms') }}">Terms of Service</a></li>
                         <li><a href="{{ url_for('public.privacy') }}">Privacy Policy</a></li>
                     </ul>
@@ -93,14 +107,14 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy;2023 - 2026 DeeCoder Technologies. Built with care · All rights reserved. · <a href="{{ url_for('admin.login') }}" style="color:inherit;">Admin</a></p>
+                <p>&copy;2023 - 2026 DeeCoder Technologies. Built with care · All rights reserved.</p>
             </div>
         </div>
     </footer>
 
     <button class="back-top" id="backTop" aria-label="Back to top"><i class="ri-arrow-up-line"></i></button>
 
-    <script src="{{ url_for('static', filename='js/main.js', v='20261010-custom-video-track') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20261016-shared-contact-forms') }}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
